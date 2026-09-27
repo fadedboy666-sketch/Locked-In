@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Locked In</title>
+<style>
+:root{
+  --bg:#0b0c10; --card:#15161c; --card2:#1c1e26; --red:#e3364c; --red-dim:#4a1520;
+  --text:#f2f2f5; --sub:#9a9ba3; --line:#2a2c36;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Roboto,Arial,sans-serif;}
+#app{max-width:420px;margin:0 auto;height:100%;display:flex;flex-direction:column;position:relative;background:var(--bg);overflow:hidden;}
+.screen{flex:1;overflow-y:auto;padding:20px 18px 90px;display:none;}
+.screen.active{display:block;}
+h1.title{font-size:22px;font-weight:700;margin:4px 0 14px;}
+.muted{color:var(--sub);font-size:13px;}
+
+/* HOME */
+.msg{font-size:13px;color:var(--sub);text-align:center;line-height:1.4;margin:6px 0 22px;}
+.streak-wrap{display:flex;justify-content:center;margin:18px 0;}
+.streak-circle{width:150px;height:150px;border-radius:50%;border:6px solid var(--red);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.streak-num{font-size:38px;font-weight:800;}
+.streak-label{font-size:10px;letter-spacing:1px;color:var(--sub);}
+.quote{text-align:center;font-size:13px;color:var(--sub);font-style:italic;margin:20px 0 26px;padding:0 10px;}
+.panic{background:var(--red);color:#fff;border:none;width:100%;padding:16px;border-radius:14px;font-size:15px;font-weight:700;letter-spacing:1px;}
+
+/* CARDS */
+.card{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:12px;border:1px solid var(--line);}
+.row{display:flex;align-items:center;justify-content:space-between;}
+.opt{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--line);}
+.opt .l{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;}
+
+/* CHART */
+.chart{display:flex;align-items:flex-end;justify-content:space-between;height:120px;margin:14px 0 6px;gap:6px;}
+.bar{flex:1;background:var(--red-dim);border-radius:6px 6px 0 0;position:relative;cursor:pointer;}
+.bar.sel{background:var(--red);}
+.bar-label{font-size:9px;color:var(--sub);text-align:center;margin-top:4px;}
+.popover{background:var(--card2);border-radius:12px;padding:12px;margin-top:10px;font-size:13px;color:var(--text);border:none;}
+.popover .btns{display:flex;gap:8px;margin-top:8px;}
+.popover button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--text);padding:6px;border-radius:8px;font-size:12px;}
+
+/* SCREENTIME */
+.app-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;}
+.total{font-size:34px;font-weight:800;color:var(--red);margin:6px 0 16px;}
+
+/* PROFILE */
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;margin-bottom:14px;}
+[contenteditable]:empty:before{content:attr(data-placeholder);color:rgba(255,255,255,0.5);}
+.stat-label{font-size:12px;color:var(--sub);}
+.stat-val{font-size:20px;font-weight:700;margin:2px 0 12px;}
+
+/* CALENDAR */
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px;}
+.cal-day{text-align:center;font-size:11px;color:var(--sub);padding:4px 0;}
+.cal-date{text-align:center;font-size:13px;padding:8px 0;border-radius:8px;}
+.cal-date.sel{background:var(--red);font-weight:700;}
+.task{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+.chk{width:19px;height:19px;border-radius:5px;border:2px solid var(--sub);flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.chk.done{background:var(--red);border-color:var(--red);}
+.task input{background:transparent;border:none;color:var(--text);font-size:14px;flex:1;outline:none;}
+.task input:disabled{color:var(--text);}
+.habit-grid-wrap{overflow-x:auto;}
+.habit-grid{display:grid;grid-template-columns:repeat(30,22px);gap:3px;align-items:center;font-size:9px;}
+.habit-name-row{font-size:11px;height:24px;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;}
+.habit-name-row .htxt{outline:none;overflow:hidden;text-overflow:ellipsis;}
+.habit-name-row .trash{font-size:12px;flex:none;color:var(--red);}
+.hchk{width:18px;height:18px;border-radius:4px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:9px;}
+.hnum{height:24px;display:flex;align-items:center;justify-content:center;color:var(--sub);}
+.hchk.on{background:var(--red);}
+.pct{text-align:right;font-size:12px;color:var(--sub);margin-top:10px;}
+
+/* KEYWORDS */
+.kw{display:flex;justify-content:space-between;align-items:center;background:var(--card2);padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:14px;}
+.addbtn{background:var(--red);color:#fff;border:none;width:100%;padding:11px;border-radius:10px;font-weight:700;font-size:13px;margin:6px 0 14px;}
+.toggle{width:42px;height:24px;border-radius:12px;background:#3a3c46;position:relative;flex:none;}
+.toggle.on{background:var(--red);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s;}
+.toggle.on::after{left:21px;}
+.backrow{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-weight:600;}
+.trash{color:var(--red);font-size:15px;}
+
+/* NAV */
+.nav{flex:none;background:#111219;border-top:1px solid var(--line);display:flex;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));}
+.navbtn{flex:1;text-align:center;background:none;border:none;color:var(--sub);font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.navbtn.active{color:var(--red);}
+.navbtn .ic{font-size:18px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <div class="screen active" id="home">
+    <div class="msg" id="homeMsg"></div>
+    <div class="streak-wrap"><div class="streak-circle"><div class="streak-num" id="streakNum">0</div><div class="streak-label">DAY STREAK</div></div></div>
+    <div class="quote" id="homeQuote"></div>
+    <button class="panic" onclick="openPanic()">🚨 PANIC BUTTON</button>
+    <div style="margin-top:24px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      <button onclick="nextDay()" class="popover" style="padding:8px 14px;">+ New day</button>
+      <button onclick="minusDay()" class="popover" style="padding:8px 14px;">-1 day</button>
+      <button onclick="lapsed()" class="popover" style="padding:8px 14px;">Lapsed</button>
+    </div>
+  </div>
+
+  <!-- PANIC / REMOVE URGE FLOW -->
+  <div class="screen" id="panic">
+    <div style="padding-top:4px;"><span onclick="exitPanic()" style="cursor:pointer;font-size:22px;color:var(--sub);">✕</span></div>
+    <div id="panicButtonStage" style="margin-top:60px;text-align:center;">
+      <button class="addbtn" style="font-size:16px;padding:18px;" onclick="startRemoveUrge()">Remove Urge 💥</button>
+    </div>
+    <div id="panicIntroStage" style="display:none;text-align:center;margin-top:100px;">
+      <div style="font-size:18px;font-weight:700;margin-bottom:10px;">2 minutes can be enough to let an urge settle.</div>
+      <div class="muted">Stay with the process.</div>
+    </div>
+    <div id="panicTimerStage" style="display:none;text-align:center;">
+      <div style="position:relative;width:180px;height:180px;margin:40px auto 10px;">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="80" stroke="#2a2c36" stroke-width="10" fill="none"/>
+          <circle id="panicRingProgress" cx="90" cy="90" r="80" stroke="#e3364c" stroke-width="10" fill="none" stroke-linecap="round" transform="rotate(-90 90 90)"/>
+        </svg>
+        <div id="panicTimeText" style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;">2:00</div>
+      </div>
+      <div id="panicGuideMain" style="font-size:16px;font-weight:700;margin:18px 0 6px;padding:0 10px;">Put the phone down and look around you.</div>
+      <div id="panicGuideSub" class="muted">Stay aware of your surroundings.</div>
+      <button class="addbtn" style="margin-top:34px;max-width:200px;margin-left:auto;margin-right:auto;" onclick="finishPanic()">Finish</button>
+    </div>
+    <div id="panicCompleteStage" style="display:none;text-align:center;margin-top:80px;">
+      <div style="font-size:22px;font-weight:800;">You're good.</div>
+      <div class="muted" style="margin:6px 0 30px;">The urge can pass.</div>
+      <div style="margin-bottom:16px;font-weight:600;">What do you want to do next?</div>
+      <button class="addbtn" onclick="panicCommitted()">I'm Committed 💪</button>
+      <button class="addbtn" style="background:var(--card2);color:var(--text);" onclick="panicStartFocus()">Start Focus</button>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="screen" id="calendar">
+    <div class="cal-head"><span onclick="changeMonth(-1)" style="cursor:pointer;padding:4px 10px;">‹</span><h1 class="title" style="margin:0;" id="calMonthLabel"></h1><span onclick="changeMonth(1)" style="cursor:pointer;padding:4px 10px;">›</span></div>
+    <div class="cal-grid" id="calGrid"></div>
+    <h2 style="font-size:15px;margin:16px 0 8px;" id="taskHeader">Tasks</h2>
+    <div id="taskList"></div>
+    <div id="addTaskRow" style="display:none;margin:8px 0;">
+      <input id="newTaskInput" placeholder="Task name..." style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px;color:var(--text);font-size:14px;margin-bottom:8px;">
+      <button class="addbtn" style="margin:0;" onclick="confirmAddTask()">Add</button>
+    </div>
+    <button class="addbtn" onclick="toggleAddTask()">+ Add Task</button>
+    <h2 style="font-size:15px;margin:18px 0 8px;">Habit Tracker</h2>
+    <div style="display:flex;">
+      <div id="habitNames" style="flex:none;width:112px;"></div>
+      <div style="overflow-x:auto;flex:1;"><div class="habit-grid" id="habitGrid"></div></div>
+    </div>
+    <div class="pct" id="habitPct"></div>
+    <div id="addHabitRow" style="display:none;margin:10px 0;">
+      <input id="newHabitInput" placeholder="Habit name..." style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px;color:var(--text);font-size:14px;margin-bottom:8px;">
+      <button class="addbtn" style="margin:0;" onclick="confirmAddHabit()">Add</button>
+    </div>
+    <button class="addbtn" onclick="toggleAddHabit()">+ Add Habit</button>
+  </div>
+
+  <!-- FOCUS -->
+  <div class="screen" id="focus">
+    <h1 class="title">Focus</h1>
+    <div class="opt"><div class="l">🌐 Internet Filter</div><span>›</span></div>
+    <div class="opt" onclick="showScreen('appblocker')"><div class="l">📵 App Blocker</div><span>›</span></div>
+    <h2 style="font-size:15px;margin:20px 0 4px;">Weekly Productivity</h2>
+    <div class="chart" id="chart"></div>
+    <div id="chartPop"></div>
+  </div>
+
+  <!-- SCREEN TIME -->
+  <div class="screen" id="screentime">
+    <h1 class="title">Screen Time</h1>
+    <div class="muted">Today</div>
+    <div class="total">3h 42m</div>
+    <div id="appList"></div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="profile">
+    <h1 class="title">About Me</h1>
+    <div class="avatar" contenteditable="true" data-placeholder="+" oninput="state.profileInitials=this.textContent" style="outline:none;"></div>
+    <div class="muted" style="margin-bottom:14px;">Tap name below to edit</div>
+    <div contenteditable="true" data-placeholder="Your name" oninput="state.profileName=this.textContent" style="font-size:18px;font-weight:700;margin-bottom:18px;outline:none;border-bottom:1px dashed var(--line);padding-bottom:6px;"></div>
+    <h2 style="font-size:15px;margin:8px 0;">Streak Statistics</h2>
+    <div class="stat-label">All-Time High Streak</div>
+    <div class="stat-val" id="highStreak">—</div>
+    <div class="stat-label">Lowest Streak</div>
+    <div class="stat-val" id="lowStreak">—</div>
+    <div class="opt"><div class="l">🔔 Custom Notifications</div><span>›</span></div>
+    <div class="opt" onclick="showScreen('screentime')"><div class="l">📱 Screen Time</div><span>›</span></div>
+  </div>
+
+  <!-- APP BLOCKER (sub screen) -->
+  <div class="screen" id="appblocker">
+    <div class="backrow" onclick="showScreen('focus')">← App Blocker</div>
+    <div class="muted" style="margin-bottom:10px;">Choose the apps you want to block.</div>
+    <button class="addbtn" onclick="toggleAddApp()">+ Add App</button>
+    <div id="addAppRow" style="display:none;margin:-4px 0 14px;">
+      <input id="newAppInput" placeholder="App name..." style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px;color:var(--text);font-size:14px;margin-bottom:8px;">
+      <button class="addbtn" style="margin:0;" onclick="confirmAddApp()">Add</button>
+    </div>
+    <div id="blockList"></div>
+  </div>
+
+  <div class="nav" id="nav"></div>
+</div>
+
+<script>
+let today = new Date();
+let state = {
+  streak: 0,
+  everStarted: false,
+  streakStart: null,
+  allTimeHigh: 0,
+  lostStreaks: [],
+  screen: 'home',
+  year: today.getFullYear(),
+  month: today.getMonth(), // 0-indexed
+  selectedDate: today.getDate(),
+  nextTaskId: 1,
+  tasksByDate: {}, // key: "YYYY-M-D"
+  habits: [],
+  habitState: {}, // habitState[name][monthKey] = [bool,...]
+  week: [
+    {d:'Sun',m:0},{d:'Mon',m:0},{d:'Tue',m:0},{d:'Wed',m:0},{d:'Thu',m:0},{d:'Fri',m:0},{d:'Sat',m:0}
+  ],
+  selDay: null,
+  blocked: []
+};
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+function monthKey(){ return state.year+'-'+state.month; }
+function taskKey(day){ return state.year+'-'+state.month+'-'+day; }
+function getHabitArr(h){
+  if(!state.habitState[h]) state.habitState[h] = {};
+  const mk = monthKey();
+  if(!state.habitState[h][mk]) state.habitState[h][mk] = Array(daysInMonth(state.year,state.month)).fill(false);
+  return state.habitState[h][mk];
+}
+function changeMonth(delta){
+  state.month += delta;
+  if(state.month < 0){ state.month = 11; state.year--; }
+  if(state.month > 11){ state.month = 0; state.year++; }
+  const dim = daysInMonth(state.year, state.month);
+  if(state.selectedDate > dim) state.selectedDate = dim;
+  renderCalendar();
+}
+
+const navItems = [
+  {id:'home', ic:'🏠', label:'Home'},
+  {id:'calendar', ic:'📅', label:'Calendar'},
+  {id:'focus', ic:'🎯', label:'Focus'},
+  {id:'profile', ic:'👤', label:'Profile'},
+];
+
+function fmt(mins){ return Math.floor(mins/60)+'h '+(mins%60)+'m'; }
+
+function renderNav(){
+  const nav = document.getElementById('nav');
+  nav.innerHTML = navItems.map(n=>`<button class="navbtn ${state.screen===n.id?'active':''}" onclick="showScreen('${n.id}')"><span class="ic">${n.ic}</span>${n.label}</button>`).join('');
+}
+
+function showScreen(id){
+  document.getElementById('nav').style.display='flex';
+  state.screen = navItems.some(n=>n.id===id) ? id : state.screen;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  renderNav();
+}
+
+function homeMessage(){
+  if(state.streak >= 7) return "You're doing exceptionally well! Keep pushing.";
+  if(state.streak >= 1) return "Off to a great start!";
+  if(state.streak === 0 && state.everStarted) return "Let's try again, but with greater effort.";
+  return "Ready to start your journey?";
+}
+
+function homeQuote(){
+  if(state.streak >= 7) return "Consistency is the compound interest of self-improvement.";
+  if(state.streak >= 1) return "Small steps daily beat big leaps rarely.";
+  if(state.streak === 0 && state.everStarted) return "A setback is just a setup for a comeback.";
+  return "The secret of getting ahead is getting started.";
+}
+function renderHome(){
+  document.getElementById('streakNum').textContent = state.streak;
+  document.getElementById('homeMsg').textContent = homeMessage();
+  document.getElementById('homeQuote').textContent = '"'+homeQuote()+'"';
+}
+function bumpStreak(n){
+  if(state.streak>0) state.everStarted = true;
+  state.streak = Math.max(0, state.streak+n);
+  renderHome();
+}
+function todayMidnight(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function recomputeStreak(){
+  const diff = Math.round((todayMidnight() - state.streakStart) / 86400000);
+  state.streak = Math.max(0, diff);
+  if(state.streak > 0) state.everStarted = true;
+  if(state.streak > state.allTimeHigh) state.allTimeHigh = state.streak;
+}
+function nextDay(){ state.streakStart = new Date(state.streakStart.getTime() - 86400000); recomputeStreak(); renderHome(); renderProfile(); saveStreak(); }
+function minusDay(){
+  const shifted = new Date(state.streakStart.getTime() + 86400000);
+  if(shifted <= todayMidnight()) state.streakStart = shifted;
+  recomputeStreak(); renderHome(); renderProfile(); saveStreak();
+}
+function lapsed(){
+  if(state.streak > 0) state.lostStreaks.push(state.streak);
+  state.streakStart = todayMidnight();
+  state.everStarted = true;
+  recomputeStreak();
+  renderHome(); renderProfile(); saveStreak();
+  const msgEl = document.getElementById('homeMsg');
+  msgEl.textContent = "No worries! Try again.";
+  setTimeout(()=>{ document.getElementById('homeMsg').textContent = homeMessage(); }, 2500);
+}
+function togglePanic(){}
+function savePanic(){}
+
+function showPanicStage(stage){
+  document.getElementById('panicButtonStage').style.display = stage==='button' ? 'block':'none';
+  document.getElementById('panicIntroStage').style.display = stage==='intro' ? 'block':'none';
+  document.getElementById('panicTimerStage').style.display = stage==='timer' ? 'block':'none';
+  document.getElementById('panicCompleteStage').style.display = stage==='complete' ? 'block':'none';
+}
+function clearPanicInterval(){ if(state.panicInterval){ clearInterval(state.panicInterval); state.panicInterval=null; } }
+
+function openPanic(){
+  clearPanicInterval();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('panic').classList.add('active');
+  document.getElementById('nav').style.display='none';
+  showPanicStage('button');
+}
+function exitPanic(){
+  clearPanicInterval();
+  document.getElementById('nav').style.display='flex';
+  showScreen('home');
+}
+function startRemoveUrge(){
+  showPanicStage('intro');
+  setTimeout(startPanicTimer, 1400);
+}
+function startPanicTimer(){
+  clearPanicInterval();
+  state.panicSeconds = 120;
+  showPanicStage('timer');
+  updatePanicUI();
+  state.panicInterval = setInterval(()=>{
+    state.panicSeconds--;
+    if(state.panicSeconds <= 0){
+      state.panicSeconds = 0;
+      updatePanicUI();
+      finishPanic();
+      return;
+    }
+    updatePanicUI();
+  }, 1000);
+}
+function updatePanicUI(){
+  const s = state.panicSeconds;
+  const elapsed = 120 - s;
+  const min = Math.floor(s/60), sec = s%60;
+  document.getElementById('panicTimeText').textContent = min+':'+String(sec).padStart(2,'0');
+  const circumference = 2*Math.PI*80;
+  const dashLen = circumference * (s/120);
+  const ring = document.getElementById('panicRingProgress');
+  ring.setAttribute('stroke-dasharray', dashLen+' '+circumference);
+  const main = document.getElementById('panicGuideMain'), sub = document.getElementById('panicGuideSub');
+  if(elapsed < 18){
+    main.textContent = 'Put the phone down and look around you.';
+    sub.textContent = 'Stay aware of your surroundings.';
+  } else if(elapsed < 56){
+    main.textContent = 'Take four slow breaths.';
+    sub.textContent = 'Breathe in slowly, then breathe out slowly.';
+  } else {
+    main.textContent = 'Stand up and gently stretch your arms and shoulders.';
+    sub.textContent = '';
+  }
+}
+function finishPanic(){
+  clearPanicInterval();
+  showPanicStage('complete');
+}
+function panicCommitted(){
+  clearPanicInterval();
+  document.getElementById('nav').style.display='flex';
+  showScreen('home');
+}
+function panicStartFocus(){
+  clearPanicInterval();
+  document.getElementById('nav').style.display='flex';
+  showScreen('focus');
+}
+
+function renderCalendar(){
+  document.getElementById('calMonthLabel').textContent = MONTH_NAMES[state.month]+' '+state.year;
+  const dim = daysInMonth(state.year, state.month);
+  const grid = document.getElementById('calGrid');
+  const days = ['S','M','T','W','T','F','S'];
+  const leadBlanks = new Date(state.year, state.month, 1).getDay();
+  let html = days.map(d=>`<div class="cal-day">${d}</div>`).join('');
+  for(let i=0;i<leadBlanks;i++) html += `<div></div>`;
+  for(let i=1;i<=dim;i++){ html += `<div class="cal-date ${i===state.selectedDate?'sel':''}" onclick="selectDate(${i})">${i}</div>`; }
+  grid.innerHTML = html;
+
+  document.getElementById('taskHeader').textContent = 'Tasks — '+MONTH_NAMES[state.month].slice(0,3)+' '+state.selectedDate;
+  const tl = document.getElementById('taskList');
+  const tk = taskKey(state.selectedDate);
+  const tasks = state.tasksByDate[tk] || [];
+  tl.innerHTML = tasks.length ? tasks.map(t=>`
+    <div class="task">
+      <div class="chk ${t.done?'done':''}" onclick="toggleTask(${t.id})">${t.done?'✓':''}</div>
+      <input value="${t.text}" onchange="editTask(${t.id}, this.value)">
+      <span class="trash" style="padding-left:8px;" onclick="deleteTask(${t.id})">🗑</span>
+    </div>`).join('') : `<div class="muted" style="padding:8px 0;">No tasks yet for this day.</div>`;
+
+  const names = document.getElementById('habitNames');
+  names.innerHTML = `<div class="hnum" style="visibility:hidden;">.</div>` + state.habits.map(h=>
+    `<div class="habit-name-row"><span class="trash" onclick="removeHabit('${h}')">✕</span><span class="htxt" contenteditable="true" onblur="renameHabit('${h}', this.textContent)">${h}</span></div>`).join('');
+
+  const hg = document.getElementById('habitGrid');
+  hg.style.gridTemplateColumns = `repeat(${dim},22px)`;
+  let hHtml = Array.from({length:dim},(_,i)=>`<div class="hnum">${i+1}</div>`).join('');
+  state.habits.forEach(h=>{
+    const arr = getHabitArr(h);
+    for(let d=0; d<dim; d++){
+      hHtml += `<div class="hchk ${arr[d]?'on':''}" onclick="toggleHabit('${h}',${d})">${arr[d]?'✓':''}</div>`;
+    }
+  });
+  hg.innerHTML = hHtml;
+  updatePct();
+}
+function selectDate(day){ state.selectedDate = day; renderCalendar(); }
+function toggleTask(id){ const tk=taskKey(state.selectedDate); const t=state.tasksByDate[tk].find(x=>x.id===id); t.done=!t.done; renderCalendar(); }
+function editTask(id, val){ const tk=taskKey(state.selectedDate); const t=state.tasksByDate[tk].find(x=>x.id===id); t.text=val; }
+function deleteTask(id){
+  const tk=taskKey(state.selectedDate);
+  state.tasksByDate[tk] = state.tasksByDate[tk].filter(x=>x.id!==id);
+  renderCalendar();
+}
+function addTask(){
+  toggleAddTask();
+}
+function toggleAddTask(){
+  const row = document.getElementById('addTaskRow');
+  row.style.display = row.style.display==='none' ? 'block' : 'none';
+  if(row.style.display==='block') document.getElementById('newTaskInput').focus();
+}
+function confirmAddTask(){
+  const input = document.getElementById('newTaskInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const tk = taskKey(state.selectedDate);
+  if(!state.tasksByDate[tk]) state.tasksByDate[tk] = [];
+  state.tasksByDate[tk].push({id: state.nextTaskId++, text, done:false});
+  document.getElementById('addTaskRow').style.display='none';
+  renderCalendar();
+}
+function toggleHabit(h,d){ getHabitArr(h)[d] = !getHabitArr(h)[d]; renderCalendar(); }
+function renameHabit(oldName, newName){
+  newName = newName.trim();
+  if(!newName || newName===oldName) return renderCalendar();
+  state.habitState[newName] = state.habitState[oldName];
+  delete state.habitState[oldName];
+  state.habits[state.habits.indexOf(oldName)] = newName;
+  renderCalendar();
+}
+function removeHabit(h){
+  state.habits = state.habits.filter(x=>x!==h);
+  delete state.habitState[h];
+  renderCalendar();
+}
+function toggleAddHabit(){
+  const row = document.getElementById('addHabitRow');
+  row.style.display = row.style.display==='none' ? 'block' : 'none';
+  if(row.style.display==='block') document.getElementById('newHabitInput').focus();
+}
+function confirmAddHabit(){
+  const input = document.getElementById('newHabitInput');
+  const name = input.value.trim();
+  if(!name || state.habits.includes(name)) return;
+  state.habits.push(name);
+  state.habitState[name] = {};
+  input.value = '';
+  document.getElementById('addHabitRow').style.display='none';
+  renderCalendar();
+}
+function updatePct(){
+  if(!state.habits.length){ document.getElementById('habitPct').textContent = ''; return; }
+  let total=0, done=0;
+  const dim = daysInMonth(state.year, state.month);
+  state.habits.forEach(h=>{ getHabitArr(h).forEach(v=>{ total++; if(v) done++; }); });
+  document.getElementById('habitPct').textContent = 'Monthly Completion: '+Math.round(done/total*100)+'%';
+}
+
+function renderFocus(){
+  const max = Math.max(60, ...state.week.map(w=>w.m));
+  const chart = document.getElementById('chart');
+  chart.innerHTML = state.week.map((w,i)=>`
+    <div style="flex:1;text-align:center;">
+      <div class="bar ${state.selDay===i?'sel':''}" style="height:${Math.max(14, w.m/max*100)}px;" onclick="selectDay(${i})"></div>
+      <div class="bar-label">${w.d}<br>${fmt(w.m)}</div>
+    </div>`).join('');
+  renderChartPop();
+}
+function selectDay(i){ state.selDay = state.selDay===i ? null : i; renderFocus(); }
+function renderChartPop(){
+  const pop = document.getElementById('chartPop');
+  if(state.selDay===null){ pop.innerHTML=''; return; }
+  const w = state.week[state.selDay];
+  if(state.editingDay === state.selDay){
+    pop.innerHTML = `<div class="popover"><b>${w.d}</b><br>
+      <input id="editMinInput" type="number" value="${w.m}" style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text);margin:8px 0;" placeholder="minutes">
+      <div class="btns"><button onclick="saveDay(${state.selDay})">Save</button><button onclick="state.editingDay=null;renderChartPop();">Cancel</button></div></div>`;
+    document.getElementById('editMinInput').focus();
+  } else {
+    pop.innerHTML = `<div class="popover"><b>${w.d}</b><br>Productivity time: ${fmt(w.m)}
+      <div class="btns"><button onclick="state.editingDay=${state.selDay};renderChartPop();">Edit</button><button onclick="deleteDay(${state.selDay})">Delete</button></div></div>`;
+  }
+}
+function saveDay(i){
+  const val = parseInt(document.getElementById('editMinInput').value, 10);
+  if(!isNaN(val) && val>=0) state.week[i].m = val;
+  state.editingDay = null;
+  renderFocus();
+}
+function deleteDay(i){ state.week[i].m=0; state.selDay=null; renderFocus(); }
+
+function renderScreenTime(){
+  const apps=[['Chrome',72],['TikTok',48],['YouTube',37],['Instagram',25],['Gmail',15],['Maps',10]];
+  document.getElementById('appList').innerHTML = apps.map(a=>`<div class="app-row"><span>${a[0]}</span><span>${fmt(a[1])}</span></div>`).join('');
+}
+
+function renderProfile(){
+  document.getElementById('highStreak').textContent = state.allTimeHigh > 0 ? state.allTimeHigh+' days 🔥' : '—';
+  document.getElementById('lowStreak').textContent = state.lostStreaks.length ? Math.min(...state.lostStreaks)+' days' : '—';
+}
+
+function renderBlocker(){
+  document.getElementById('blockList').innerHTML = state.blocked.map((a,i)=>`
+    <div class="kw"><span>${a.name}</span>
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span class="trash" onclick="removeBlock(${i})">🗑</span>
+        <span class="toggle ${a.on?'on':''}" onclick="toggleBlock(${i})"></span>
+      </span>
+    </div>`).join('');
+}
+function toggleBlock(i){ state.blocked[i].on=!state.blocked[i].on; renderBlocker(); }
+function removeBlock(i){ state.blocked.splice(i,1); renderBlocker(); }
+function toggleAddApp(){
+  const row = document.getElementById('addAppRow');
+  row.style.display = row.style.display==='none' ? 'block' : 'none';
+  if(row.style.display==='block') document.getElementById('newAppInput').focus();
+}
+function confirmAddApp(){
+  const input = document.getElementById('newAppInput');
+  const name = input.value.trim();
+  if(!name) return;
+  state.blocked.push({name, on:true});
+  document.getElementById('addAppRow').style.display='none';
+  renderBlocker();
+}
+
+function saveStreak(){
+  try{
+    localStorage.setItem('lockedin_streak', JSON.stringify({
+      streakStart: state.streakStart.toISOString(),
+      everStarted: state.everStarted,
+      allTimeHigh: state.allTimeHigh,
+      lostStreaks: state.lostStreaks
+    }));
+  }catch(e){}
+}
+function loadStreak(){
+  state.streakStart = todayMidnight();
+  try{
+    const saved = JSON.parse(localStorage.getItem('lockedin_streak') || 'null');
+    if(saved){
+      state.streakStart = saved.streakStart ? new Date(saved.streakStart) : todayMidnight();
+      state.everStarted = saved.everStarted || false;
+      state.allTimeHigh = saved.allTimeHigh || 0;
+      state.lostStreaks = saved.lostStreaks || [];
+    }
+  }catch(e){}
+  recomputeStreak();
+}
+loadStreak();
+renderNav(); renderHome(); renderCalendar(); renderFocus(); renderScreenTime(); renderProfile(); renderBlocker();
+saveStreak();
+</script>
+</body>
+</html>
