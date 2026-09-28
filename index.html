@@ -177,27 +177,18 @@ h1.title{font-size:22px;font-weight:700;margin:4px 0 14px;}
     <div id="chartPop"></div>
   </div>
 
-  <!-- SCREEN TIME -->
-  <div class="screen" id="screentime">
-    <h1 class="title">Screen Time</h1>
-    <div class="muted">Today</div>
-    <div class="total">3h 42m</div>
-    <div id="appList"></div>
-  </div>
-
   <!-- PROFILE -->
   <div class="screen" id="profile">
     <h1 class="title">About Me</h1>
-    <div class="avatar" contenteditable="true" data-placeholder="+" oninput="state.profileInitials=this.textContent" style="outline:none;"></div>
+    <div class="avatar" id="profileInitialsEl" contenteditable="true" data-placeholder="+" oninput="state.profileInitials=this.textContent;saveAll()" style="outline:none;"></div>
     <div class="muted" style="margin-bottom:14px;">Tap name below to edit</div>
-    <div contenteditable="true" data-placeholder="Your name" oninput="state.profileName=this.textContent" style="font-size:18px;font-weight:700;margin-bottom:18px;outline:none;border-bottom:1px dashed var(--line);padding-bottom:6px;"></div>
+    <div id="profileNameEl" contenteditable="true" data-placeholder="Your name" oninput="state.profileName=this.textContent;saveAll()" style="font-size:18px;font-weight:700;margin-bottom:18px;outline:none;border-bottom:1px dashed var(--line);padding-bottom:6px;"></div>
     <h2 style="font-size:15px;margin:8px 0;">Streak Statistics</h2>
     <div class="stat-label">All-Time High Streak</div>
     <div class="stat-val" id="highStreak">—</div>
     <div class="stat-label">Lowest Streak</div>
     <div class="stat-val" id="lowStreak">—</div>
     <div class="opt"><div class="l">🔔 Custom Notifications</div><span>›</span></div>
-    <div class="opt" onclick="showScreen('screentime')"><div class="l">📱 Screen Time</div><span>›</span></div>
   </div>
 
   <!-- APP BLOCKER (sub screen) -->
@@ -220,6 +211,7 @@ let today = new Date();
 let state = {
   streak: 0,
   everStarted: false,
+  lapsed: false,
   streakStart: null,
   allTimeHigh: 0,
   lostStreaks: [],
@@ -281,14 +273,14 @@ function showScreen(id){
 function homeMessage(){
   if(state.streak >= 7) return "You're doing exceptionally well! Keep pushing.";
   if(state.streak >= 1) return "Off to a great start!";
-  if(state.streak === 0 && state.everStarted) return "Let's try again, but with greater effort.";
+  if(state.streak === 0 && state.lapsed) return "Let's try again, but with greater effort.";
   return "Ready to start your journey?";
 }
 
 function homeQuote(){
   if(state.streak >= 7) return "Consistency is the compound interest of self-improvement.";
   if(state.streak >= 1) return "Small steps daily beat big leaps rarely.";
-  if(state.streak === 0 && state.everStarted) return "A setback is just a setup for a comeback.";
+  if(state.streak === 0 && state.lapsed) return "A setback is just a setup for a comeback.";
   return "The secret of getting ahead is getting started.";
 }
 function renderHome(){
@@ -318,6 +310,7 @@ function lapsed(){
   if(state.streak > 0) state.lostStreaks.push(state.streak);
   state.streakStart = todayMidnight();
   state.everStarted = true;
+  state.lapsed = true;
   recomputeStreak();
   renderHome(); renderProfile(); saveStreak();
   const msgEl = document.getElementById('homeMsg');
@@ -440,10 +433,11 @@ function renderCalendar(){
   });
   hg.innerHTML = hHtml;
   updatePct();
+  saveAll();
 }
 function selectDate(day){ state.selectedDate = day; renderCalendar(); }
 function toggleTask(id){ const tk=taskKey(state.selectedDate); const t=state.tasksByDate[tk].find(x=>x.id===id); t.done=!t.done; renderCalendar(); }
-function editTask(id, val){ const tk=taskKey(state.selectedDate); const t=state.tasksByDate[tk].find(x=>x.id===id); t.text=val; }
+function editTask(id, val){ const tk=taskKey(state.selectedDate); const t=state.tasksByDate[tk].find(x=>x.id===id); t.text=val; saveAll(); }
 function deleteTask(id){
   const tk=taskKey(state.selectedDate);
   state.tasksByDate[tk] = state.tasksByDate[tk].filter(x=>x.id!==id);
@@ -513,6 +507,7 @@ function renderFocus(){
       <div class="bar-label">${w.d}<br>${fmt(w.m)}</div>
     </div>`).join('');
   renderChartPop();
+  saveAll();
 }
 function selectDay(i){ state.selDay = state.selDay===i ? null : i; renderFocus(); }
 function renderChartPop(){
@@ -537,11 +532,6 @@ function saveDay(i){
 }
 function deleteDay(i){ state.week[i].m=0; state.selDay=null; renderFocus(); }
 
-function renderScreenTime(){
-  const apps=[['Chrome',72],['TikTok',48],['YouTube',37],['Instagram',25],['Gmail',15],['Maps',10]];
-  document.getElementById('appList').innerHTML = apps.map(a=>`<div class="app-row"><span>${a[0]}</span><span>${fmt(a[1])}</span></div>`).join('');
-}
-
 function renderProfile(){
   document.getElementById('highStreak').textContent = state.allTimeHigh > 0 ? state.allTimeHigh+' days 🔥' : '—';
   document.getElementById('lowStreak').textContent = state.lostStreaks.length ? Math.min(...state.lostStreaks)+' days' : '—';
@@ -555,6 +545,7 @@ function renderBlocker(){
         <span class="toggle ${a.on?'on':''}" onclick="toggleBlock(${i})"></span>
       </span>
     </div>`).join('');
+  saveAll();
 }
 function toggleBlock(i){ state.blocked[i].on=!state.blocked[i].on; renderBlocker(); }
 function removeBlock(i){ state.blocked.splice(i,1); renderBlocker(); }
@@ -572,11 +563,38 @@ function confirmAddApp(){
   renderBlocker();
 }
 
+function saveAll(){
+  try{
+    localStorage.setItem('lockedin_data', JSON.stringify({
+      tasksByDate: state.tasksByDate, nextTaskId: state.nextTaskId,
+      habits: state.habits, habitState: state.habitState,
+      week: state.week, blocked: state.blocked,
+      profileName: state.profileName || '', profileInitials: state.profileInitials || ''
+    }));
+  }catch(e){}
+}
+function loadAll(){
+  try{
+    const d = JSON.parse(localStorage.getItem('lockedin_data') || 'null');
+    if(!d) return;
+    state.tasksByDate = d.tasksByDate || {};
+    state.nextTaskId = d.nextTaskId || 1;
+    state.habits = d.habits || [];
+    state.habitState = d.habitState || {};
+    state.week = d.week || state.week;
+    state.blocked = d.blocked || [];
+    state.profileName = d.profileName || '';
+    state.profileInitials = d.profileInitials || '';
+    document.getElementById('profileNameEl').textContent = state.profileName;
+    document.getElementById('profileInitialsEl').textContent = state.profileInitials;
+  }catch(e){}
+}
 function saveStreak(){
   try{
     localStorage.setItem('lockedin_streak', JSON.stringify({
       streakStart: state.streakStart.toISOString(),
       everStarted: state.everStarted,
+      lapsed: state.lapsed,
       allTimeHigh: state.allTimeHigh,
       lostStreaks: state.lostStreaks
     }));
@@ -589,14 +607,16 @@ function loadStreak(){
     if(saved){
       state.streakStart = saved.streakStart ? new Date(saved.streakStart) : todayMidnight();
       state.everStarted = saved.everStarted || false;
+      state.lapsed = saved.lapsed !== undefined ? saved.lapsed : ((saved.lostStreaks||[]).length > 0);
       state.allTimeHigh = saved.allTimeHigh || 0;
       state.lostStreaks = saved.lostStreaks || [];
     }
   }catch(e){}
   recomputeStreak();
 }
+loadAll();
 loadStreak();
-renderNav(); renderHome(); renderCalendar(); renderFocus(); renderScreenTime(); renderProfile(); renderBlocker();
+renderNav(); renderHome(); renderCalendar(); renderFocus(); renderProfile(); renderBlocker();
 saveStreak();
 </script>
 </body>
