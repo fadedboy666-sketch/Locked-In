@@ -8,9 +8,13 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0b0c10; --card:#15161c; --card2:#1c1e26; --red:#e3364c; --red-dim:#4a1520;
+  --blue:#3b82f6; --blue-dim:#13213f;
   --text:#f2f2f5; --sub:#9a9ba3; --line:#2a2c36;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -19,19 +23,25 @@
 *{box-sizing:border-box;}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Roboto,Arial,sans-serif;}
 #app{max-width:420px;margin:0 auto;height:100%;display:flex;flex-direction:column;position:relative;background:var(--bg);overflow:hidden;}
-.screen{flex:1;overflow-y:auto;padding:20px 18px 90px;display:none;}
-.screen.active{display:block;}
+.topbar{flex:none;display:flex;align-items:center;gap:8px;padding:16px 18px 2px;font-family:'Sora',-apple-system,Roboto,Arial,sans-serif;font-weight:700;font-size:19px;letter-spacing:0.2px;}
+.topbar .ic{font-size:18px;}
+.screen{flex:1;overflow-y:auto;padding:14px 18px 90px;display:none;}
+.screen.active{display:block;animation:fadeIn .22s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+button, .addbtn, .panic, .navbtn, .opt, .cal-date, .hchk, .chk, .toggle, .trash{transition:transform .12s ease, opacity .12s ease, box-shadow .2s ease;}
+button:active, .addbtn:active, .panic:active, .opt:active{transform:scale(0.97);opacity:0.9;}
+.hchk:active, .chk:active, .cal-date:active{transform:scale(0.88);}
 h1.title{font-size:22px;font-weight:700;margin:4px 0 14px;}
 .muted{color:var(--sub);font-size:13px;}
 
 /* HOME */
 .msg{font-size:13px;color:var(--sub);text-align:center;line-height:1.4;margin:6px 0 22px;}
 .streak-wrap{display:flex;justify-content:center;margin:18px 0;}
-.streak-circle{width:150px;height:150px;border-radius:50%;border:6px solid var(--red);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.streak-circle{width:150px;height:150px;border-radius:50%;border:6px solid var(--red);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 28px rgba(227,54,76,0.35), inset 0 0 18px rgba(227,54,76,0.12);}
 .streak-num{font-size:38px;font-weight:800;}
 .streak-label{font-size:10px;letter-spacing:1px;color:var(--sub);}
 .quote{text-align:center;font-size:13px;color:var(--sub);font-style:italic;margin:20px 0 26px;padding:0 10px;}
-.panic{background:var(--red);color:#fff;border:none;width:100%;padding:16px;border-radius:14px;font-size:15px;font-weight:700;letter-spacing:1px;}
+.panic{background:linear-gradient(135deg,#ff4d63,var(--red));color:#fff;border:none;width:100%;padding:16px;border-radius:14px;font-size:15px;font-weight:700;letter-spacing:1px;box-shadow:0 6px 20px rgba(227,54,76,0.4);}
 
 /* CARDS */
 .card{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:12px;border:1px solid var(--line);}
@@ -43,7 +53,7 @@ h1.title{font-size:22px;font-weight:700;margin:4px 0 14px;}
 .chart{display:flex;align-items:flex-end;justify-content:space-between;height:120px;margin:14px 0 6px;gap:6px;}
 .bar{flex:1;background:var(--red-dim);border-radius:6px 6px 0 0;position:relative;cursor:pointer;}
 .bar.sel{background:var(--red);}
-.bar-label{font-size:9px;color:var(--sub);text-align:center;margin-top:4px;}
+.bar-label{font-size:10px;color:var(--sub);text-align:center;margin-top:4px;}
 .popover{background:var(--card2);border-radius:12px;padding:12px;margin-top:10px;font-size:13px;color:var(--text);border:none;}
 .popover .btns{display:flex;gap:8px;margin-top:8px;}
 .popover button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--text);padding:6px;border-radius:8px;font-size:12px;}
@@ -70,18 +80,24 @@ h1.title{font-size:22px;font-weight:700;margin:4px 0 14px;}
 .task input{background:transparent;border:none;color:var(--text);font-size:14px;flex:1;outline:none;}
 .task input:disabled{color:var(--text);}
 .habit-grid-wrap{overflow-x:auto;}
-.habit-grid{display:grid;grid-template-columns:repeat(30,22px);gap:3px;align-items:center;font-size:9px;}
-.habit-name-row{font-size:11px;height:24px;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;}
+.habit-grid{display:grid;grid-template-columns:repeat(30,24px);gap:4px;align-items:center;font-size:11px;}
+.habit-name-row{font-size:15px;height:28px;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;}
 .habit-name-row .htxt{outline:none;overflow:hidden;text-overflow:ellipsis;}
-.habit-name-row .trash{font-size:12px;flex:none;color:var(--red);}
-.hchk{width:18px;height:18px;border-radius:4px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:9px;}
-.hnum{height:24px;display:flex;align-items:center;justify-content:center;color:var(--sub);}
+.habit-name-row .trash{font-size:15px;flex:none;color:var(--red);}
+.hchk{width:24px;height:28px;border-radius:5px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:11px;}
+.hnum{height:28px;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:10px;}
+.st-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+.st-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--sub);flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent;transition:all .25s cubic-bezier(.4,0,.2,1);}
+.st-check.done{background:var(--red);border-color:var(--red);color:#fff;transform:scale(1.08);}
+.st-text{font-size:14px;transition:all .25s ease;}
+.st-text.done{color:var(--sub);text-decoration:line-through;}
+.st-celebrate{text-align:center;padding:18px 0;animation:fadeIn .3s ease;}
 .hchk.on{background:var(--red);}
 .pct{text-align:right;font-size:12px;color:var(--sub);margin-top:10px;}
 
 /* KEYWORDS */
 .kw{display:flex;justify-content:space-between;align-items:center;background:var(--card2);padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:14px;}
-.addbtn{background:var(--red);color:#fff;border:none;width:100%;padding:11px;border-radius:10px;font-weight:700;font-size:13px;margin:6px 0 14px;}
+.addbtn{background:linear-gradient(135deg,#ff4d63,var(--red));color:#fff;border:none;width:100%;padding:11px;border-radius:10px;font-weight:700;font-size:13px;margin:6px 0 14px;box-shadow:0 3px 12px rgba(227,54,76,0.3);}
 .toggle{width:42px;height:24px;border-radius:12px;background:#3a3c46;position:relative;flex:none;}
 .toggle.on{background:var(--red);}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s;}
@@ -98,24 +114,50 @@ h1.title{font-size:22px;font-weight:700;margin:4px 0 14px;}
 </head>
 <body>
 <div id="app">
+  <div class="topbar"><span class="ic">🔒</span><span>Locked In</span></div>
 
   <!-- HOME -->
   <div class="screen active" id="home">
     <div class="msg" id="homeMsg"></div>
     <div class="streak-wrap"><div class="streak-circle"><div class="streak-num" id="streakNum">0</div><div class="streak-label">DAY STREAK</div></div></div>
-    <div class="quote" id="homeQuote"></div>
-    <button class="panic" onclick="openPanic()">🚨 PANIC BUTTON</button>
-    <div style="margin-top:24px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 2px;">
       <button onclick="nextDay()" class="popover" style="padding:8px 14px;">+ New day</button>
       <button onclick="minusDay()" class="popover" style="padding:8px 14px;">-1 day</button>
       <button onclick="lapsed()" class="popover" style="padding:8px 14px;">Lapsed</button>
     </div>
+    <div class="quote" id="homeQuote"></div>
+
+    <div class="card" onclick="showScreen('appblocker')" style="cursor:pointer;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex:none;"></span>
+        <span style="font-size:13px;font-weight:700;" id="blockedCount">0 blocked apps</span>
+      </div>
+      <div id="blockedChips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin:4px 0 16px;">
+      <div class="card" onclick="toggleSmallTaskAdd()" style="flex:1;text-align:center;cursor:pointer;margin-bottom:0;">
+        <div style="font-size:22px;">📋</div>
+        <div style="font-size:12px;font-weight:700;margin-top:4px;">Small Tasks</div>
+      </div>
+      <div class="card" onclick="showScreen('focus')" style="flex:1;text-align:center;cursor:pointer;margin-bottom:0;">
+        <div style="font-size:22px;">🎯</div>
+        <div style="font-size:12px;font-weight:700;margin-top:4px;">Lock In Mode</div>
+      </div>
+    </div>
+
+    <div id="smallTasksBox"></div>
+
+    <button class="panic" onclick="openPanic()">🚨 PANIC BUTTON<div style="font-size:11px;font-weight:500;letter-spacing:0;opacity:0.85;margin-top:3px;">Help reduce urge</div></button>
   </div>
 
   <!-- PANIC / REMOVE URGE FLOW -->
   <div class="screen" id="panic">
     <div style="padding-top:4px;"><span onclick="exitPanic()" style="cursor:pointer;font-size:22px;color:var(--sub);">✕</span></div>
-    <div id="panicButtonStage" style="margin-top:60px;text-align:center;">
+    <div id="panicButtonStage" style="margin-top:20px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:10px;">🛡️</div>
+      <div style="font-size:19px;font-weight:700;margin-bottom:10px;">You're in control right now.</div>
+      <div class="muted" style="margin-bottom:22px;line-height:1.5;">Many people fall into lust or bad habits chasing a feeling that fades in seconds. Urges are temporary — they rise, peak, and pass, usually within a couple of minutes. Riding this one out instead of acting on it is how the habit actually breaks.</div>
       <button class="addbtn" style="font-size:16px;padding:18px;" onclick="startRemoveUrge()">Remove Urge 💥</button>
     </div>
     <div id="panicIntroStage" style="display:none;text-align:center;margin-top:100px;">
@@ -156,7 +198,7 @@ h1.title{font-size:22px;font-weight:700;margin:4px 0 14px;}
     <button class="addbtn" onclick="toggleAddTask()">+ Add Task</button>
     <h2 style="font-size:15px;margin:18px 0 8px;">Habit Tracker</h2>
     <div style="display:flex;">
-      <div id="habitNames" style="flex:none;width:112px;"></div>
+      <div id="habitNames" style="flex:none;width:130px;"></div>
       <div style="overflow-x:auto;flex:1;"><div class="habit-grid" id="habitGrid"></div></div>
     </div>
     <div class="pct" id="habitPct"></div>
@@ -227,7 +269,11 @@ let state = {
     {d:'Sun',m:0},{d:'Mon',m:0},{d:'Tue',m:0},{d:'Wed',m:0},{d:'Thu',m:0},{d:'Fri',m:0},{d:'Sat',m:0}
   ],
   selDay: null,
-  blocked: []
+  blocked: [],
+  smallTasks: [],
+  smallTasksDate: '',
+  smallTasksCelebrating: false,
+  smallTaskAdding: false
 };
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
@@ -277,16 +323,43 @@ function homeMessage(){
   return "Ready to start your journey?";
 }
 
+const QUOTES_HIGH = [
+  "Consistency is the compound interest of self-improvement.",
+  "Discipline is choosing between what you want now and what you want most.",
+  "You don't rise to the level of your goals, you fall to the level of your systems.",
+  "Every day you show up, you're becoming someone new.",
+  "Motivation gets you started. Discipline keeps you going.",
+  "The chains of habit are too weak to be felt until they are too strong to be broken.",
+  "You're proving to yourself who you are, one day at a time.",
+];
+const QUOTES_LOW = [
+  "Small steps daily beat big leaps rarely.",
+  "Progress, not perfection.",
+  "One good day is the start of a pattern.",
+  "You showed up. That's the whole game.",
+  "Momentum is built one choice at a time.",
+  "Keep going. It compounds quietly.",
+];
+const QUOTES_LAPSED = [
+  "A setback is just a setup for a comeback.",
+  "Falling down isn't failure. Staying down is.",
+  "You're not back at zero, you're back at one.",
+  "The streak resets. The lessons don't.",
+  "Every master has failed more times than a beginner has tried.",
+  "This is the moment that decides who you become next.",
+  "You're still in the fight. That's what matters.",
+];
 function homeQuote(){
-  if(state.streak >= 7) return "Consistency is the compound interest of self-improvement.";
-  if(state.streak >= 1) return "Small steps daily beat big leaps rarely.";
-  if(state.streak === 0 && state.lapsed) return "A setback is just a setup for a comeback.";
+  if(state.streak >= 7) return QUOTES_HIGH[Math.floor(Math.random()*QUOTES_HIGH.length)];
+  if(state.streak >= 1) return QUOTES_LOW[Math.floor(Math.random()*QUOTES_LOW.length)];
+  if(state.streak === 0 && state.lapsed) return QUOTES_LAPSED[Math.floor(Math.random()*QUOTES_LAPSED.length)];
   return "The secret of getting ahead is getting started.";
 }
 function renderHome(){
   document.getElementById('streakNum').textContent = state.streak;
   document.getElementById('homeMsg').textContent = homeMessage();
   document.getElementById('homeQuote').textContent = '"'+homeQuote()+'"';
+  renderSmallTasks();
 }
 function bumpStreak(n){
   if(state.streak>0) state.everStarted = true;
@@ -415,7 +488,7 @@ function renderCalendar(){
     <div class="task">
       <div class="chk ${t.done?'done':''}" onclick="toggleTask(${t.id})">${t.done?'✓':''}</div>
       <input value="${t.text}" onchange="editTask(${t.id}, this.value)">
-      <span class="trash" style="padding-left:8px;" onclick="deleteTask(${t.id})">🗑</span>
+      <span class="trash" style="padding-left:8px;" onclick="deleteTask(${t.id})">✕</span>
     </div>`).join('') : `<div class="muted" style="padding:8px 0;">No tasks yet for this day.</div>`;
 
   const names = document.getElementById('habitNames');
@@ -423,7 +496,7 @@ function renderCalendar(){
     `<div class="habit-name-row"><span class="trash" onclick="removeHabit('${h}')">✕</span><span class="htxt" contenteditable="true" onblur="renameHabit('${h}', this.textContent)">${h}</span></div>`).join('');
 
   const hg = document.getElementById('habitGrid');
-  hg.style.gridTemplateColumns = `repeat(${dim},22px)`;
+  hg.style.gridTemplateColumns = `repeat(${dim},24px)`;
   let hHtml = Array.from({length:dim},(_,i)=>`<div class="hnum">${i+1}</div>`).join('');
   state.habits.forEach(h=>{
     const arr = getHabitArr(h);
@@ -515,15 +588,16 @@ function renderChartPop(){
   if(state.selDay===null){ pop.innerHTML=''; return; }
   const w = state.week[state.selDay];
   if(state.editingDay === state.selDay){
-    pop.innerHTML = `<div class="popover"><b>${w.d}</b><br>
+    pop.innerHTML = `<div class="popover"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${w.d}</b><span onclick="closeChartPop()" style="cursor:pointer;color:var(--sub);font-size:16px;padding:0 4px;">✕</span></div>
       <input id="editMinInput" type="number" value="${w.m}" style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text);margin:8px 0;" placeholder="minutes">
       <div class="btns"><button onclick="saveDay(${state.selDay})">Save</button><button onclick="state.editingDay=null;renderChartPop();">Cancel</button></div></div>`;
     document.getElementById('editMinInput').focus();
   } else {
-    pop.innerHTML = `<div class="popover"><b>${w.d}</b><br>Productivity time: ${fmt(w.m)}
+    pop.innerHTML = `<div class="popover"><div style="display:flex;justify-content:space-between;align-items:center;"><b>${w.d}</b><span onclick="closeChartPop()" style="cursor:pointer;color:var(--sub);font-size:16px;padding:0 4px;">✕</span></div>Productivity time: ${fmt(w.m)}
       <div class="btns"><button onclick="state.editingDay=${state.selDay};renderChartPop();">Edit</button><button onclick="deleteDay(${state.selDay})">Delete</button></div></div>`;
   }
 }
+function closeChartPop(){ state.selDay=null; state.editingDay=null; renderChartPop(); }
 function saveDay(i){
   const val = parseInt(document.getElementById('editMinInput').value, 10);
   if(!isNaN(val) && val>=0) state.week[i].m = val;
@@ -541,10 +615,90 @@ function renderBlocker(){
   document.getElementById('blockList').innerHTML = state.blocked.map((a,i)=>`
     <div class="kw"><span>${a.name}</span>
       <span style="display:flex;align-items:center;gap:10px;">
-        <span class="trash" onclick="removeBlock(${i})">🗑</span>
+        <span class="trash" onclick="removeBlock(${i})">✕</span>
         <span class="toggle ${a.on?'on':''}" onclick="toggleBlock(${i})"></span>
       </span>
     </div>`).join('');
+  renderBlockedSummary();
+  saveAll();
+}
+const CHIP_COLORS = ['#e1306c','#ff0000','#25d366','#1da1f2','#f59e0b','#8b5cf6','#06b6d4'];
+function renderBlockedSummary(){
+  const on = state.blocked.filter(a=>a.on);
+  document.getElementById('blockedCount').textContent = on.length + (on.length===1?' blocked app':' blocked apps');
+  document.getElementById('blockedChips').innerHTML = on.length ? on.map((a,i)=>{
+    const initials = a.name.trim().slice(0,2).toUpperCase();
+    const color = CHIP_COLORS[i % CHIP_COLORS.length];
+    return `<div style="width:30px;height:30px;border-radius:9px;background:${color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;" title="${a.name}">${initials}</div>`;
+  }).join('') : `<span class="muted" style="font-size:12px;">None yet — tap to add apps</span>`;
+}
+function todayStr(){ return new Date().toDateString(); }
+function ensureSmallTasksFresh(){
+  if(state.smallTasksDate !== todayStr()){
+    state.smallTasksDate = todayStr();
+    state.smallTasks = [];
+    state.smallTasksCelebrating = false;
+  }
+}
+function renderSmallTasks(){
+  ensureSmallTasksFresh();
+  const box = document.getElementById('smallTasksBox');
+  if(state.smallTasksCelebrating){
+    box.innerHTML = `<div class="card st-celebrate"><div style="font-size:26px;">🎉</div><div style="font-weight:700;margin-top:6px;">Congratulations! You finished today's non-negotiables.</div></div>`;
+    return;
+  }
+  const list = state.smallTasks.map(t=>`
+      <div class="st-row">
+        <div class="st-check ${t.done?'done':''}" onclick="toggleSmallTask(${t.id})">${t.done?'✓':''}</div>
+        <div class="st-text ${t.done?'done':''}" style="flex:1;">${t.text}</div>
+        <span class="trash" onclick="removeSmallTask(${t.id})">✕</span>
+      </div>`).join('');
+  const addBox = state.smallTaskAdding ? `<div class="card">
+      <div class="muted" style="margin-bottom:8px;">Add a small non-negotiable for today</div>
+      <input id="smallTaskInput" placeholder="Add a task" style="width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px;color:var(--text);font-size:14px;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;">
+        <button class="addbtn" style="margin:0;flex:1;" onclick="confirmAddSmallTask()">Add</button>
+        <button class="addbtn" style="margin:0;flex:1;background:var(--card2);color:var(--text);" onclick="state.smallTaskAdding=false;renderSmallTasks();">Cancel</button>
+      </div>
+    </div>` : '';
+  box.innerHTML = addBox + (list ? `<div class="card">${list}</div>` : '');
+  if(state.smallTaskAdding) document.getElementById('smallTaskInput').focus();
+}
+function toggleSmallTaskAdd(){
+  ensureSmallTasksFresh();
+  if(state.smallTasksCelebrating){ return; }
+  state.smallTaskAdding = !state.smallTaskAdding;
+  renderSmallTasks();
+}
+function confirmAddSmallTask(){
+  const input = document.getElementById('smallTaskInput');
+  const text = input.value.trim();
+  if(!text) return;
+  state.smallTasks.push({id: Date.now(), text, done:false});
+  saveAll();
+  renderSmallTasks();
+}
+function removeSmallTask(id){
+  state.smallTasks = state.smallTasks.filter(x=>x.id!==id);
+  saveAll();
+  renderSmallTasks();
+}
+function toggleSmallTask(id){
+  const t = state.smallTasks.find(x=>x.id===id);
+  t.done = !t.done;
+  renderSmallTasks();
+  if(state.smallTasks.every(x=>x.done)){
+    setTimeout(()=>{
+      state.smallTasksCelebrating = true;
+      renderSmallTasks();
+      setTimeout(()=>{
+        state.smallTasksCelebrating = false;
+        state.smallTasks = [];
+        saveAll();
+        renderSmallTasks();
+      }, 2200);
+    }, 350);
+  }
   saveAll();
 }
 function toggleBlock(i){ state.blocked[i].on=!state.blocked[i].on; renderBlocker(); }
@@ -569,6 +723,7 @@ function saveAll(){
       tasksByDate: state.tasksByDate, nextTaskId: state.nextTaskId,
       habits: state.habits, habitState: state.habitState,
       week: state.week, blocked: state.blocked,
+      smallTasks: state.smallTasks, smallTasksDate: state.smallTasksDate,
       profileName: state.profileName || '', profileInitials: state.profileInitials || ''
     }));
   }catch(e){}
@@ -583,6 +738,8 @@ function loadAll(){
     state.habitState = d.habitState || {};
     state.week = d.week || state.week;
     state.blocked = d.blocked || [];
+    state.smallTasks = d.smallTasks || [];
+    state.smallTasksDate = d.smallTasksDate || '';
     state.profileName = d.profileName || '';
     state.profileInitials = d.profileInitials || '';
     document.getElementById('profileNameEl').textContent = state.profileName;
