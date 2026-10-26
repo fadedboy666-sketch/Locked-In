@@ -846,7 +846,7 @@ else { pill.classList.remove('skipped'); icon.textContent = '✓'; }
 text.textContent = message;
 pill.classList.add('show');
 if(toastTimeoutHandle) clearTimeout(toastTimeoutHandle);
-toastTimeoutHandle = setTimeout(() => pill.classList.remove('show'), 2500);
+toastTimeoutHandle = setTimeout(() => pill.classList.remove('show'), 7000);
 }
 function renderHomeRoutine(){
 const container = document.getElementById('homeRoutineContainer');
