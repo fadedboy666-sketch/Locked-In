@@ -182,8 +182,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 </div>
 </div>
 <div style="display:flex;justify-content:center;margin:10px 0;">
-<button onclick="if(state.streak > 0) { if(confirm('Slip ups happen. You can still come back stronger. Confirm reset?')) lapsed(); } else { alert('Your streak is already at 0. Let’s build it up today!'); }" class="btn-sm" style="padding:6px 16px;background:var(--red-dim);color:var(--red);">Relapsed</button>
-
+<button onclick="if(confirm('Slip ups happen. You can still come back stronger. Confirm reset?')) { lapsed(); showPlainToast('Streak reset logged.', true); } else { showPlainToast('Stay locked in! Streak is safe.', false); }" class="btn-sm" style="padding:6px 16px;background:var(--red-dim);color:var(--red);">Relapsed</button>
 
 </div>
 <div class="quote" id="homeQuote">Small steps daily beat big leaps rarely.</div>
