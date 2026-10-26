@@ -559,6 +559,52 @@ Add the goals that you want to achieve this year
 <div class="nav" id="nav"></div>
 </div>
 <script>
+  // --- EXISTING APP CODE ---
+    let state = { ... };
+
+    // --- PASTE THE NOTIFICATION CODE RIGHT HERE ---
+    async function requestDeviceNotification() {
+      if (!('Notification' in window)) {
+        alert('This browser/device does not support system notifications.');
+        return;
+      }
+      
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        new Notification('Locked In 🔒', {
+          body: 'Notifications are now active! Stay locked in.',
+          icon: 'https://cdn-icons-png.flaticon.com/512/1828/1828640.png'
+        });
+      } else {
+        alert('Notification permission denied.');
+      }
+    }
+
+    function sendInstantNotification(title, message) {
+      if (Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, {
+              body: message,
+              icon: 'https://cdn-icons-png.flaticon.com/512/1828/1828640.png',
+              vibrate: [200, 100, 200]
+            });
+          }).catch(() => {
+            new Notification(title, { body: message });
+          });
+        } else {
+          new Notification(title, { body: message });
+        }
+      } else {
+        requestDeviceNotification();
+      }
+    }
+    // ----------------------------------------------
+
+  </script>
+</body>
+</html>
+
 const DAILY_QUOTES = [
 "Small steps daily beat big leaps rarely.",
 "Discipline is choosing between what you want now and what you want most.",
