@@ -1,0 +1,28 @@
+{
+"name": "Locked In",
+"short_name": "Locked In",
+"description": "A tactical habit tracking, streak monitoring, and focus engine PWA designed to lock in daily discipline and personal growth.",
+"start_url": "/",
+"display": "standalone",
+"background_color": "#0b0c10",
+"theme_color": "#e3364c",
+"orientation": "portrait",
+"categories": [
+"lifestyle",
+"productivity"
+],
+"icons": [
+{
+"src": "icons/icon-192x192.png",
+"sizes": "192x192",
+"type": "image/png",
+"purpose": "any maskable"
+},
+{
+"src": "icons/icon-512x512.png",
+"sizes": "512x512",
+"type": "image/png",
+"purpose": "any maskable"
+}
+]
+}
