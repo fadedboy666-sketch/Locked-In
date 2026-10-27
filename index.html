@@ -576,6 +576,16 @@ Add the goals that you want to achieve this year
 <div class="nav" id="nav"></div>
 </div>
 <script>
+  function closeRelapseModal(confirmed) {
+  document.getElementById('customRelapseModal').style.display = 'none';
+  if (confirmed) {
+    lapsed();
+    showPlainToast('Streak reset logged.', true);
+  } else {
+    showPlainToast('Be honest if you slipped off. If yes, click Relapse. You can still come back stronger.', false);
+  }
+}
+
   function triggerRelapseFlow() {
   const userConfirmed = window.confirm("Slip ups happen. You can still come back stronger. Confirm reset?");
   
