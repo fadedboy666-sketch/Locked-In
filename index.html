@@ -629,6 +629,17 @@ Add the goals that you want to achieve this year
     // ----------------------------------------------
 
   </script>
+  <div id="customRelapseModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:#1a1a1a; padding:24px; border-radius:16px; width:85%; max-width:320px; text-align:center; border:1px solid #333;">
+    <h3 style="color:#fff; margin-bottom:12px; font-size:18px;">Locked In</h3>
+    <p style="color:#aaa; font-size:14px; margin-bottom:20px;">Slip ups happen. You can still come back stronger. Confirm reset?</p>
+    <div style="display:flex; gap:10px;">
+      <button onclick="closeRelapseModal(false)" style="flex:1; padding:10px; background:#333; color:#fff; border:none; border-radius:8px; font-weight:bold;">Cancel</button>
+      <button onclick="closeRelapseModal(true)" style="flex:1; padding:10px; background:var(--red); color:#fff; border:none; border-radius:8px; font-weight:bold;">OK</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
 
