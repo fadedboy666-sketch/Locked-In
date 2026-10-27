@@ -182,7 +182,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 </div>
 </div>
 <div style="display:flex;justify-content:center;margin:10px 0;">
-<button onclick="if(confirm('Slip ups happen. You can still come back stronger. Confirm reset?')) { lapsed(); } else { showPlainToast('Be honest if you slipped off. If yes, click Relapse. You can still come back stronger.', false); }" class="btn-sm" style="position: relative; z-index: 999; pointer-events: auto; padding: 6px 16px; background: var(--red-dim); color: var(--red);">Relapsed</button>
+<button onclick="document.getElementById('customRelapseModal').style.display='flex'" class="btn-sm" style="padding:6px 16px;background:var(--red-dim);color:var(--red);">Relapsed</button>
 
 
 
