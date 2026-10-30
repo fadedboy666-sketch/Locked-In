@@ -1669,7 +1669,6 @@ renderNav();
 renderHome();
 renderBlocker();
 rescheduleAllReminders();
-
 const splashFill = document.getElementById('splashProgressFill');
 
 if(splashFill) {
@@ -1678,7 +1677,7 @@ if(splashFill) {
   });
 }
 
-// Wait 2.5 seconds, then fade out the splash and fade in the app.
+// Keep splash visible for 2.5 seconds.
 setTimeout(() => {
   const sp = document.getElementById('splashScreen');
   const app = document.getElementById('app');
@@ -1687,11 +1686,11 @@ setTimeout(() => {
 
   if(sp) {
     sp.style.opacity = '0';
-    setTimeout(() => sp.remove(), 500);
+    setTimeout(() => sp.remove(), 250);
   }
 }, 2500);
 
-// Skip the splash if the page is restored from the browser's back-forward cache.
+// If the page is restored from browser cache, skip the splash.
 window.addEventListener('pageshow', (event) => {
   if(event.persisted) {
     const sp = document.getElementById('splashScreen');
