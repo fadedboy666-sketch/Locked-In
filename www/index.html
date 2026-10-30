@@ -23,10 +23,11 @@ box-sizing:border-box;
 html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Roboto,Arial,sans-serif;}
 #app{max-width:420px;margin:0 auto;height:100%;height:100dvh;display:flex;flex-direction:column;position:relative;background:var(--bg);overflow:hidden;padding-top:env(safe-area-inset-top,0px);}
 .topbar{flex:none;display:flex;align-items:center;justify-content:flex-start;padding:16px 18px 2px;font-family:'Sora',sans-serif;font-weight:700;font-size:19px;letter-spacing:0.2px;}
+#app{opacity:0;transition:opacity .45s ease;}#app.app-ready{opacity:1;}
 .screen{flex:1;overflow-y:auto;padding:14px 18px 90px;display:none;scroll-behavior:smooth;}
 .screen.active{display:block;animation:fadeIn .22s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.toast-pill{position:absolute;top:14px;left:50%;transform:translateX(-50%) translateY(-50px);background:var(--card);border:1px solid var(--green);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(0,0,0,0.6);z-index:200;opacity:0;transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);pointer-events:none;}
+.toast-pill{position:absolute;top:14px;left:50%;transform:translateX(-50%) translateY(-50px);background:var(--card);border:1px solid var(--green);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(0,0,0,0.6);z-index:200;opacity:0;transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);pointer-events:none;max-width:85vw;white-space:normal;line-height:1.4;text-align:left;}
 .toast-pill.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .toast-pill.skipped{border-color:var(--red);}
 .msg{font-size:14px;font-weight:700;color:var(--text);text-align:center;line-height:1.4;margin:6px 0 16px;}
@@ -87,10 +88,11 @@ html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--te
 .day-picker{display:flex;gap:4px;margin-bottom:12px;}
 .day-pill{flex:1;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px 0;text-align:center;font-size:11px;font-weight:700;cursor:pointer;color:var(--sub);}
 .day-pill.active{background:var(--red);border-color:var(--red);color:#fff;}
-.nav{flex:none;background:#111219;border-top:1px solid var(--line);display:flex;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));z-index:50;}
-.navbtn{flex:1;text-align:center;background:none;border:none;color:var(--sub);font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
-.navbtn.active{color:var(--red);}
-.navbtn .ic{font-size:18px;}
+.nav{flex:none;display:flex;justify-content:center;padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));z-index:50;}
+.nav-inner{display:flex;background:var(--card);border:1px solid var(--line);border-radius:28px;padding:8px 10px;gap:6px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+.navbtn{background:none;border:none;color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer;width:54px;height:44px;border-radius:20px;transition:all .18s ease;}
+.navbtn.active{color:#fff;background:var(--red);box-shadow:0 4px 14px rgba(227,54,76,0.4);}
+.navbtn .ic{font-size:20px;}
 .screen h1.title{font-size:22px;font-weight:700;margin:4px 0 14px;}
 .opt{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--line);cursor:pointer;}
 .muted{color:var(--sub);font-size:13px;}
@@ -167,8 +169,33 @@ html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--te
 .avatar-tile.locked{opacity:0.35;cursor:not-allowed;}
 .avatar-tile-icon{font-size:28px;}
 .avatar-tile-label{font-size:9px;font-weight:700;color:var(--sub);text-align:center;}
+
+.splash-screen{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 38%,#303135 0%,#222326 42%,#151618 100%);opacity:0;animation:splashAppear .45s ease forwards;transition:opacity .45s ease}
+.splash-logo{width:104px;height:104px;object-fit:contain;border-radius:22px;box-shadow:0 12px 36px rgba(0,0,0,.28);margin-bottom:22px}
+.splash-brand{font-family:'Sora',sans-serif;font-weight:900;letter-spacing:2.4px;font-size:25px;color:#d5d6d8}
+.splash-brand span:last-child{color:var(--red)}
+.splash-tagline{font-size:10px;letter-spacing:2.2px;font-weight:700;color:#a5a6aa;margin-top:10px}
+.splash-progress{width:150px;height:3px;border-radius:8px;background:#48494d;overflow:hidden;margin-top:34px}
+#splashProgressFill{height:100%;width:0;background:var(--red);border-radius:8px;transition:width .2s ease}
+@keyframes splashAppear{to{opacity:1}}
+.backup-section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+.backup-heading{font-size:17px;font-weight:800;margin-bottom:9px}
+.backup-description{font-size:13px;color:var(--sub);line-height:1.5;margin-bottom:16px}
+.backup-action{width:100%;display:flex;justify-content:center;align-items:center;gap:9px;border:0;border-radius:12px;padding:14px 16px;background:var(--red);color:#fff;font-size:15px;font-weight:800;cursor:pointer}
+.backup-plus{width:72px;height:72px;border:1px dashed #777;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:300;color:var(--text);margin:4px auto 10px;cursor:pointer}
+.backup-pick-label{text-align:center;font-size:13px;color:var(--sub);cursor:pointer}
+#resetConfirmBox{position:fixed!important;inset:0;z-index:1200;background:rgba(0,0,0,.78)!important;border:0!important;border-radius:0!important;padding:20px!important;margin:0!important;align-items:center;justify-content:center}
+#resetConfirmBox .reset-dialog{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+#toastPill.relapse-toast{width:min(420px,calc(100vw - 36px));max-width:calc(100vw - 36px);border-radius:15px;padding:13px 16px;font-size:14px;line-height:1.45;box-sizing:border-box}
+
 </style>
 </head><body>
+<div id="splashScreen" class="splash-screen">
+  <img class="splash-logo" src="icon-512.png" alt="Locked In logo">
+  <div class="splash-brand"><span>LOCKED</span> <span>IN</span></div>
+  <div class="splash-tagline">FOCUS. DISCIPLINE. EXECUTE.</div>
+  <div class="splash-progress"><div id="splashProgressFill"></div></div>
+</div>
 <div id="app">
 <div class="topbar">Locked In</div>
 <div class="toast-pill" id="toastPill">
@@ -184,7 +211,7 @@ html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--te
 </div>
 </div>
 <div style="display:flex;justify-content:center;margin:10px 0;">
-<button onclick="lapsed()" class="btn-sm" style="padding:6px 16px;background:var(--red-dim);color:var(--red);">Relapsed</button>
+<button onclick="openRelapseConfirm()" class="btn-sm" style="padding:6px 16px;background:var(--red-dim);color:var(--red);">Relapsed</button>
 </div>
 <div class="quote" id="homeQuote">Small steps daily beat big leaps rarely.</div>
 <div class="quick-action-bar">
@@ -374,8 +401,10 @@ html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--te
 </div>
 </div>
 <div id="rankCard" style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:18px;text-align:center;">
-<div id="rankEmoji" style="font-size:24px;margin-bottom:4px;"></div>
-<div id="rankText" style="color:var(--red);font-weight:800;font-size:15px;letter-spacing:0.3px;"></div>
+<div style="display:flex;align-items:center;justify-content:center;gap:6px;color:var(--sub);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:6px;">
+<span>RANK</span><span style="font-size:14px;">⚔️</span>
+</div>
+<div id="rankText" style="color:#fff;font-weight:800;font-size:19px;letter-spacing:0.3px;font-family:'Sora',sans-serif;"></div>
 </div>
 <div class="profile-stats-plain">
 <div class="profile-stats-header">Streak Stats</div>
@@ -407,6 +436,16 @@ html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--te
 <div class="arrow-icon">›</div>
 </div>
 </div>
+<div class="modal-overlay" id="relapseModal">
+<div class="modal-card" style="text-align:center;">
+<div style="font-size:17px;font-weight:800;margin-bottom:10px;">Did you really relapse?</div>
+<div class="muted" style="margin-bottom:20px;line-height:1.5;">Slip-ups happen. If you fell off, it's okay — you can come back stronger. This can't be undone, so make sure before confirming.</div>
+<div style="display:flex;gap:10px;">
+<button class="addbtn" style="margin:0;flex:1;background:var(--card2);color:var(--text);" onclick="closeRelapseConfirm()">Cancel</button>
+<button class="addbtn" style="margin:0;flex:1;" onclick="confirmRelapse()">Confirm</button>
+</div>
+</div>
+</div>
 <div class="modal-overlay" id="avatarModal">
 <div class="modal-card">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -435,10 +474,10 @@ Add the goals that you want to achieve this year
 <div class="backrow" onclick="showScreen('profile')">← Profile</div>
 <h1 class="title">Settings</h1>
 <div class="muted" style="margin-bottom:16px;">Manage your preferences and local app storage.</div>
-<div class="opt" onclick="exportBackupData()">
+<div class="opt" onclick="showScreen('backupScreen')">
 <div>
 <div style="font-size:15px;font-weight:700;">Store and backup data</div>
-<div class="muted">Download your saved data as a file</div>
+<div class="muted">Save or restore your progress</div>
 </div>
 <div style="font-weight:700;">›</div>
 </div>
@@ -449,14 +488,39 @@ Add the goals that you want to achieve this year
 </div>
 <div style="font-weight:700;color:var(--red);">Reset</div>
 </div>
-<div id="resetConfirmBox" style="display:none;background:var(--card2);border:1px solid var(--red-dim);border-radius:12px;padding:14px;margin-top:4px;">
-<div style="font-size:13px;margin-bottom:10px;">Are you sure? This cannot be undone.</div>
+<div id="resetConfirmBox" style="display:none;">
+<div class="reset-dialog">
+<div style="font-size:16px;font-weight:800;margin-bottom:10px;">Reset all data?</div>
+<div class="muted" style="font-size:13px;margin-bottom:18px;">Are you sure? This cannot be undone.</div>
 <div style="display:flex;gap:8px;">
 <button class="addbtn" style="margin:0;flex:1;" onclick="confirmResetAllData()">Yes, Reset</button>
-<button class="addbtn" style="margin:0;flex:1;background:var(--card);color:var(--text);" onclick="document.getElementById('resetConfirmBox').style.display='none';">Cancel</button>
+<button class="addbtn" style="margin:0;flex:1;background:var(--card2);color:var(--text);" onclick="document.getElementById('resetConfirmBox').style.display='none';">Cancel</button>
+</div></div></div>
+</div>
+<div class="screen" id="backupScreen">
+<div class="backrow" onclick="showScreen('settingsScreen')">← Settings</div>
+<h1 class="title">Data &amp; Backup</h1>
+<div class="backup-section">
+  <div class="backup-heading">Store your data</div>
+  <div class="backup-description">Export your saved data as JSON to keep a backup in case something happens to your app or device.</div>
+  <button class="backup-action" onclick="exportBackupData()"><span aria-hidden="true">↓</span> Save Backup File</button>
+</div>
+<div class="backup-section">
+  <div class="backup-heading">Restore your data</div>
+  <div class="backup-description">JSON backup files only.</div>
+  <input id="backupFileInput" type="file" accept=".json,application/json" style="display:none" onchange="handleBackupFile(this)">
+  <div class="backup-plus" role="button" tabindex="0" aria-label="Choose backup file" onclick="document.getElementById('backupFileInput').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('backupFileInput').click();}">+</div>
+  <div class="backup-pick-label" onclick="document.getElementById('backupFileInput').click()">Tap + to choose a backup file</div>
 </div>
 </div>
-</div>
+<div class="modal-overlay" id="restoreConfirmModal">
+<div class="modal-card" style="text-align:center;">
+<div style="font-size:17px;font-weight:800;margin-bottom:10px;">Restore backup?</div>
+<div class="muted" id="restoreConfirmText" style="margin-bottom:20px;line-height:1.5;">This will replace your current saved progress with the selected backup.</div>
+<div style="display:flex;gap:10px;">
+<button class="addbtn" style="margin:0;flex:1;background:var(--card2);color:var(--text);" onclick="cancelRestoreBackup()">Cancel</button>
+<button class="addbtn" style="margin:0;flex:1;" onclick="confirmRestoreBackup()">Confirm Restore</button>
+</div></div></div>
 <div class="screen" id="panic">
 <div style="padding-top:4px;"><span onclick="exitPanic()" style="cursor:pointer;font-size:22px;color:var(--sub);">✕</span></div>
 <div id="panicStage1" style="margin-top:20px;text-align:center;">
@@ -484,7 +548,7 @@ Add the goals that you want to achieve this year
 <div class="kw"><span>• Go outside and get some air.</span></div>
 <div class="kw"><span>• Do 10 pushups or light activity.</span></div>
 </div>
-<button class="addbtn" onclick="panicFinished()">Locking In Now 🔒</button>
+<button class="addbtn" onclick="panicFinished()">Locking In Now </button>
 </div>
 </div>
 <div class="screen" id="appblocker">
@@ -666,11 +730,11 @@ const navItems = [
 {id:'profile', ic:'👤', label:'Profile'},
 ];
 function renderNav(){
-document.getElementById('nav').innerHTML = navItems.map(n=>`<button class="navbtn ${state.screen===n.id?'active':''}" onclick="showScreen('${n.id}')"><span class="ic">${n.ic}</span>${n.label}</button>`).join('');
+document.getElementById('nav').innerHTML = `<div class="nav-inner">${navItems.map(n=>`<button class="navbtn ${state.screen===n.id?'active':''}" onclick="showScreen('${n.id}')"><span class="ic">${n.ic}</span></button>`).join('')}</div>`;
 }
 function showScreen(id){
 document.getElementById('nav').style.display='flex';
-state.screen = (navItems.some(n=>n.id===id) || id==='routineBuilder' || id==='appblocker' || id==='panic' || id==='habitTrackerScreen' || id==='dailyTasksScreen' || id==='yearlyGoalScreen' || id==='settingsScreen') ? id : 'home';
+state.screen = (navItems.some(n=>n.id===id) || id==='routineBuilder' || id==='appblocker' || id==='panic' || id==='habitTrackerScreen' || id==='dailyTasksScreen' || id==='yearlyGoalScreen' || id==='settingsScreen' || id==='backupScreen') ? id : 'home';
 document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
 document.getElementById(id).classList.add('active');
 renderNav();
@@ -720,6 +784,17 @@ function minusDay(){
 const shifted = new Date(state.streakStart.getTime() + 86400000);
 if(shifted <= todayMidnight()) state.streakStart = shifted;
 recomputeStreak(); saveAll(); renderHome();
+}
+function openRelapseConfirm(){
+document.getElementById('relapseModal').style.display = 'flex';
+}
+function closeRelapseConfirm(){
+document.getElementById('relapseModal').style.display = 'none';
+setTimeout(()=>showPlainToast('Be honest with yourself. If it happened, confirm it — that’s how you come back stronger.', true, 6000, true), 1500);
+}
+function confirmRelapse(){
+document.getElementById('relapseModal').style.display = 'none';
+lapsed();
 }
 function lapsed(){
 if(state.streak > 0) state.lostStreaks.push(state.streak);
@@ -778,16 +853,18 @@ pill.classList.add('show');
 if(toastTimeoutHandle) clearTimeout(toastTimeoutHandle);
 toastTimeoutHandle = setTimeout(() => pill.classList.remove('show'), 2500);
 }
-function showPlainToast(message, isWarning){
+function showPlainToast(message, isWarning, customDuration, wideRelapse){
 const pill = document.getElementById('toastPill');
 const icon = document.getElementById('toastIcon');
 const text = document.getElementById('toastText');
-if(isWarning){ pill.classList.add('skipped'); icon.textContent = '🔒'; }
+if(isWarning){ pill.classList.add('skipped'); icon.textContent = '!'; }
 else { pill.classList.remove('skipped'); icon.textContent = '✓'; }
 text.textContent = message;
+pill.classList.toggle('relapse-toast', !!wideRelapse);
 pill.classList.add('show');
 if(toastTimeoutHandle) clearTimeout(toastTimeoutHandle);
-toastTimeoutHandle = setTimeout(() => pill.classList.remove('show'), 2500);
+const duration = customDuration || (message.length > 40 ? 4500 : 2500);
+toastTimeoutHandle = setTimeout(() => pill.classList.remove('show'), duration);
 }
 function renderHomeRoutine(){
 const container = document.getElementById('homeRoutineContainer');
@@ -1202,8 +1279,7 @@ return tier;
 function renderProfilePage(){
 document.getElementById('profileAvatarImg').src = (AVATAR_TIERS.find(t=>t.key===state.selectedAvatarKey) || AVATAR_TIERS[0]).img;
 document.getElementById('profileNameDisplay').textContent = state.userName || 'Savage Athlete';
-document.getElementById('rankText').textContent = currentAvatarTier().name.toUpperCase();
-document.getElementById('rankEmoji').textContent = currentAvatarTier().emoji;
+document.getElementById('rankText').textContent = currentAvatarTier().name;
 document.getElementById('profileStatATH').textContent = `${state.allTimeHigh} Days`;
 const minLost = state.lostStreaks.length ? Math.min(...state.lostStreaks) : 0;
 document.getElementById('profileStatLowest').textContent = `${minLost} Days`;
@@ -1288,8 +1364,11 @@ renderProfilePage();
 }
 function exportBackupData(){
 try{
-const data = localStorage.getItem('lockedin_master_v6') || '{}';
-const blob = new Blob([data], { type: 'application/json' });
+const data = localStorage.getItem('lockedin_master_v6');
+if(!data) throw new Error('No saved data');
+const parsed = JSON.parse(data);
+if(!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid saved data');
+const blob = new Blob([JSON.stringify(parsed, null, 2)], { type: 'application/json' });
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url;
@@ -1297,14 +1376,42 @@ a.download = 'locked-in-backup.json';
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
-URL.revokeObjectURL(url);
-showPlainToast('Backup downloaded', false);
+setTimeout(()=>URL.revokeObjectURL(url), 1500);
+showPlainToast('Backup file prepared', false);
 }catch(e){
-showPlainToast('Backup failed', true);
+showPlainToast('Could not create backup', true);
 }
+}
+let pendingRestoreData = null;
+function handleBackupFile(input){
+const file = input.files && input.files[0];
+if(!file) return;
+if(!file.name.toLowerCase().endsWith('.json') && file.type !== 'application/json'){
+showPlainToast('Choose a JSON backup file', true); input.value=''; return;
+}
+const reader = new FileReader();
+reader.onload = ()=>{
+try{
+const parsed = JSON.parse(String(reader.result || ''));
+const required = ['streakStart','everStarted','lapsed','allTimeHigh','lostStreaks','userName','selectedAvatarKey','yearlyGoals','blocked','routine','trackerHabits','calendarTasks','focusSeconds','isLockedIn','lockInStartTimestamp'];
+if(!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !required.every(k=>Object.prototype.hasOwnProperty.call(parsed,k)) || !parsed.routine || typeof parsed.routine !== 'object' || !Array.isArray(parsed.trackerHabits) || !Array.isArray(parsed.yearlyGoals) || !Array.isArray(parsed.blocked)) throw new Error('Invalid backup');
+pendingRestoreData = parsed;
+document.getElementById('restoreConfirmText').textContent = 'This will replace your current saved progress with the selected backup. Continue?';
+document.getElementById('restoreConfirmModal').style.display='flex';
+}catch(e){ pendingRestoreData=null; showPlainToast('Invalid or unsupported backup file', true); }
+input.value='';
+};
+reader.onerror=()=>{pendingRestoreData=null;showPlainToast('Could not read backup file',true);input.value='';};
+reader.readAsText(file);
+}
+function cancelRestoreBackup(){pendingRestoreData=null;document.getElementById('restoreConfirmModal').style.display='none';}
+function confirmRestoreBackup(){
+if(!pendingRestoreData) return;
+try{localStorage.setItem('lockedin_master_v6',JSON.stringify(pendingRestoreData));pendingRestoreData=null;document.getElementById('restoreConfirmModal').style.display='none';location.reload();}
+catch(e){showPlainToast('Restore failed',true);}
 }
 function startResetConfirm(){
-document.getElementById('resetConfirmBox').style.display = 'block';
+document.getElementById('resetConfirmBox').style.display = 'flex';
 }
 function confirmResetAllData(){
 localStorage.removeItem('lockedin_master_v6');
@@ -1531,6 +1638,13 @@ renderNav();
 renderHome();
 renderBlocker();
 rescheduleAllReminders();
+const splashFill = document.getElementById('splashProgressFill');
+if(splashFill) splashFill.style.width = '100%';
+requestAnimationFrame(()=>{ document.getElementById('app').classList.add('app-ready'); });
+setTimeout(()=>{
+const sp = document.getElementById('splashScreen');
+if(sp){ sp.style.opacity = '0'; setTimeout(()=>sp.remove(), 450); }
+}, 950);
 </script>
 </body>
 </html>
