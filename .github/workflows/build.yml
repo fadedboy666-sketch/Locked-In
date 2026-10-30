@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -30,6 +31,73 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      - name: Generate Android launcher icons
+        run: |
+          pip install pillow
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+
+          source = Image.open("www/icon-512.png").convert("RGBA")
+          root = Path("android/app/src/main/res")
+
+          densities = {
+              "mdpi": 48,
+              "hdpi": 72,
+              "xhdpi": 96,
+              "xxhdpi": 144,
+              "xxxhdpi": 192
+          }
+
+          for density, size in densities.items():
+              folder = root / f"mipmap-{density}"
+              folder.mkdir(parents=True, exist_ok=True)
+
+              icon = source.resize((size, size), Image.Resampling.LANCZOS)
+              icon.save(folder / "ic_launcher.png")
+              icon.save(folder / "ic_launcher_round.png")
+
+          foreground_sizes = {
+              "mdpi": 108,
+              "hdpi": 162,
+              "xhdpi": 216,
+              "xxhdpi": 324,
+              "xxxhdpi": 432
+          }
+
+          for density, size in foreground_sizes.items():
+              folder = root / f"mipmap-{density}"
+              foreground = source.resize(
+                  (size, size), Image.Resampling.LANCZOS
+              )
+              foreground.save(folder / "ic_launcher_foreground.png")
+
+          adaptive = root / "mipmap-anydpi-v26"
+          adaptive.mkdir(parents=True, exist_ok=True)
+
+          xml = '''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>
+          '''
+
+          (adaptive / "ic_launcher.xml").write_text(xml)
+          (adaptive / "ic_launcher_round.xml").write_text(xml)
+
+          colors = root / "values"
+          colors.mkdir(parents=True, exist_ok=True)
+          (colors / "ic_launcher_colors.xml").write_text(
+              '''<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#0b0c10</color>
+          </resources>
+          '''
+          )
+
+          print("Android launcher icons generated successfully.")
+          PY
 
       - name: Build debug APK
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug
