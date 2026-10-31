@@ -107,12 +107,23 @@ jobs:
           }
 
           for density, size in foreground_sizes.items():
-              folder = root / f"mipmap-{density}"
-              foreground = source.resize(
-                  (size, size), Image.Resampling.LANCZOS
-              )
-              foreground.save(folder / "ic_launcher_foreground.png")
+    folder = root / f"mipmap-{density}"
 
+    foreground = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    artwork_size = int(size * 0.66)
+
+    artwork = source.resize(
+        (artwork_size, artwork_size),
+        Image.Resampling.LANCZOS
+    )
+
+    offset = (
+        (size - artwork_size) // 2,
+        (size - artwork_size) // 2
+    )
+
+    foreground.alpha_composite(artwork, offset)
+    foreground.save(folder / "ic_launcher_foreground.png")
           adaptive = root / "mipmap-anydpi-v26"
           adaptive.mkdir(parents=True, exist_ok=True)
 
