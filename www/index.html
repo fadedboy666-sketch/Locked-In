@@ -223,11 +223,7 @@ html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--te
 
 </style>
 </head><body>
-<div id="splashScreen" class="splash-screen">
-  <img class="splash-logo" src="icon-512.png" alt="Locked In logo">
-  <div class="splash-brand"><span>LOCKED</span> <span>IN</span></div>
-  <div class="splash-tagline">FOCUS. DISCIPLINE. EXECUTE.</div>
-</div>
+
 <div id="app">
 <div class="topbar">Locked In</div>
 <div class="toast-pill" id="toastPill">
@@ -1670,29 +1666,7 @@ renderNav();
 renderHome();
 renderBlocker();
 rescheduleAllReminders();
-// Keep splash visible for 2.5 seconds.
-setTimeout(() => {
-  const sp = document.getElementById('splashScreen');
-  const app = document.getElementById('app');
 
-  if(app) app.classList.add('app-ready');
-
-  if(sp) {
-    sp.style.opacity = '0';
-    setTimeout(() => sp.remove(), 250);
-  }
-}, 2500);
-
-// If the page is restored from browser cache, skip the splash.
-window.addEventListener('pageshow', (event) => {
-  if(event.persisted) {
-    const sp = document.getElementById('splashScreen');
-    const app = document.getElementById('app');
-
-    if(sp) sp.remove();
-    if(app) app.classList.add('app-ready');
-  }
-});
 
 
 </script>
