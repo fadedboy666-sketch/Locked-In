@@ -31,6 +31,46 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
+              - name: Match native splash screen
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("android/app/src/main/res/values/styles.xml")
+          content = path.read_text()
+
+          pattern = r'(<style name="AppTheme\.NoActionBarLaunch"[^>]*>)(.*?)(</style>)'
+
+          match = re.search(pattern, content, re.S)
+          if not match:
+              raise SystemExit("Launch theme not found. Build stopped safely.")
+
+          block = match.group(2)
+
+          items = {
+              "windowSplashScreenBackground": "#222326",
+              "windowSplashScreenAnimatedIcon": "@mipmap/ic_launcher",
+              "postSplashScreenTheme": "@style/AppTheme.NoActionBar",
+              "android:windowBackground": "#222326"
+          }
+
+          for name, value in items.items():
+              tag = f"android:{name}" if name.startswith("android:") else name
+              item = f'<item name="{tag}">{value}</item>'
+              pattern_item = rf'<item name="{re.escape(tag)}">.*?</item>'
+
+              if re.search(pattern_item, block):
+                  block = re.sub(pattern_item, item, block)
+              else:
+                  block += "\n        " + item
+
+          updated = match.group(1) + block + match.group(3)
+          content = content[:match.start()] + updated + content[match.end():]
+          path.write_text(content)
+
+          print("Native splash theme updated.")
+          PY
 
       - name: Generate Android launcher icons
         run: |
