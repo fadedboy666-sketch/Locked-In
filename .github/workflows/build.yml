@@ -105,8 +105,7 @@ jobs:
               "xxhdpi": 324,
               "xxxhdpi": 432
           }
-
-                    for density, size in foreground_sizes.items():
+          for density, size in foreground_sizes.items():
               folder = root / f"mipmap-{density}"
 
               foreground = Image.new("RGBA", (size, size), (0, 0, 0, 0))
