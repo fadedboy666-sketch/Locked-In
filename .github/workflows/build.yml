@@ -31,7 +31,7 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
-              - name: Match native splash screen
+      - name: Match native splash screen
         run: |
           python3 - <<'PY'
           from pathlib import Path
