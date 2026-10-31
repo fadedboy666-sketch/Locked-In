@@ -56,7 +56,7 @@ jobs:
           }
 
           for name, value in items.items():
-              tag = f"android:{name}" if name.startswith("android:") else name
+              tag = name
               item = f'<item name="{tag}">{value}</item>'
               pattern_item = rf'<item name="{re.escape(tag)}">.*?</item>'
 
