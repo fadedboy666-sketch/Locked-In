@@ -25,6 +25,8 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+              - name: Bundle native notifications
+        run: npx --yes esbuild@0.24.2 www/notifications.js --bundle --format=iife --outfile=www/notifications.bundle.js
 
       - name: Add Android platform
         run: npx cap add android
