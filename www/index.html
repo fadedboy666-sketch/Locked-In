@@ -1252,25 +1252,21 @@ let calMonth = new Date().getMonth();
 let selectedCalDateStr = getTodayDateKey();
 let graphWeekOffset = 0;
 let pendingAvatarKey = null;
-let activeReminderTimeouts = [];
-function clearAllReminderTimeouts() { activeReminderTimeouts.forEach(id => clearTimeout(id)); activeReminderTimeouts = []; }
-function msUntilTime(timeStr) { const parts = (timeStr || '08:00').split(':'); const h = parseInt(parts[0], 10), m = parseInt(parts[1], 10); const now = new Date(); const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0); if (next <= now)
-    next.setDate(next.getDate() + 1); return next - now; }
-function scheduleHabitReminder(item) { if (!item.time)
-    return; const delay = msUntilTime(item.time); const id = setTimeout(() => { try {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Locked In', { body: item.name + ' — time to lock in.' });
+async function enableReminderPermissionIfNeeded() {
+    if (window.Capacitor?.isNativePlatform?.() && window.LockedInNotifications) {
+        return window.LockedInNotifications.requestPermission();
+    }
+    return false;
+}
+function rescheduleAllReminders() {
+    if (window.Capacitor?.isNativePlatform?.() && window.LockedInNotifications) {
+        return window.LockedInNotifications.syncAll({
+            routine: state.routine,
+            sessionStartTimestamp: state.isLockedIn ? state.lockInStartTimestamp : null,
+            dailyTasks: todayTasks()
+        });
     }
 }
-catch (e) { } scheduleHabitReminder(item); }, delay); activeReminderTimeouts.push(id); }
-async function enableReminderPermissionIfNeeded() { try {
-    if ('Notification' in window && Notification.permission !== 'granted') {
-        await Notification.requestPermission();
-    }
-}
-catch (e) { } }
-function rescheduleAllReminders() { clearAllReminderTimeouts(); ['morning', 'afternoon', 'night'].forEach(slot => { (state.routine[slot] || []).forEach(item => { if (item.time)
-    scheduleHabitReminder(item); }); }); }
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const navItems = [{ id: 'home', ic: '🏠', label: 'Home' }, { id: 'calendar', ic: '📅', label: 'Calendar' }, { id: 'focus', ic: '🎯', label: 'Focus' }, { id: 'profile', ic: '👤', label: 'Profile' },];
@@ -1319,7 +1315,7 @@ else {
         completed++; const colorClass = COLOR_TIERS[idx % COLOR_TIERS.length]; return `<div class="home-task-card"><div class="task-title-text ${t.completed ? 'completed' : ''}">${t.text}</div><div style="display:flex;align-items:center;gap:10px;"><div class="task-checkbox-ring ${t.completed ? colorClass : ''}" onclick="toggleHomeTask(${idx})">${t.completed ? '✓' : ''}</div><button class="formal-icon-btn danger" onclick="removeHomeTask(${idx})">${XSVG}</button></div></div>`; }).join('');
     document.getElementById('homeTaskCountText').textContent = `${completed}/${tasks.length}`;
 } }
-function toggleHomeTask(idx) { const todayKey = getTodayDateKey(); state.calendarTasks[todayKey][idx].completed = !state.calendarTasks[todayKey][idx].completed; saveAll(); renderHomeTasksList(); renderSelectedDateTasks(); }
+function toggleHomeTask(idx) { const todayKey = getTodayDateKey(); state.calendarTasks[todayKey][idx].completed = !state.calendarTasks[todayKey][idx].completed; saveAll(); renderHomeTasksList(); renderSelectedDateTasks(); rescheduleAllReminders(); }
 const XSVG = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
 function dateKeyFromDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function addDaysToKey(key, n) { const p = key.split('-').map(Number); return dateKeyFromDate(new Date(p[0], p[1] - 1, p[2] + n)); }
@@ -1396,7 +1392,7 @@ function praiseForSession(secs) { const today = getTodayDateKey(); if (state.pra
     return null; state.praiseTiersShown.push(tier); saveAll(); return PRAISE_LINES[tier]; }
 function enforceSessionCap() { if (state.isLockedIn && state.lockInStartTimestamp && Date.now() - state.lockInStartTimestamp >= MAX_SESSION_SECS * 1000)
     completeLockOffSession(); }
-function refreshTaskViews() { renderHomeTasksList(); renderSelectedDateTasks(); }
+function refreshTaskViews() { renderHomeTasksList(); renderSelectedDateTasks(); rescheduleAllReminders(); }
 function removeHomeTask(idx) { const list = state.calendarTasks[getTodayDateKey()]; if (!list || !list[idx])
     return; list.splice(idx, 1); saveAll(); refreshTaskViews(); }
 function confirmAddHomeTask() { const input = document.getElementById('homeTaskInput'); const text = input.value.trim(); if (!text)
@@ -1524,9 +1520,9 @@ function toggleTaskInput() { const sec = document.getElementById('taskInputSecti
     document.getElementById('taskNameInput').focus(); }
 function confirmAddTask() { const input = document.getElementById('taskNameInput'); const text = input.value.trim(); if (!text)
     return; if (!state.calendarTasks[selectedCalDateStr])
-    state.calendarTasks[selectedCalDateStr] = []; state.calendarTasks[selectedCalDateStr].push({ id: Date.now(), text, completed: false }); input.value = ''; document.getElementById('taskInputSection').style.display = 'none'; saveAll(); renderSelectedDateTasks(); renderHomeTasksList(); }
-function toggleCalTask(idx) { state.calendarTasks[selectedCalDateStr][idx].completed = !state.calendarTasks[selectedCalDateStr][idx].completed; saveAll(); renderSelectedDateTasks(); renderHomeTasksList(); }
-function removeCalTask(idx) { state.calendarTasks[selectedCalDateStr].splice(idx, 1); saveAll(); renderSelectedDateTasks(); renderHomeTasksList(); }
+    state.calendarTasks[selectedCalDateStr] = []; state.calendarTasks[selectedCalDateStr].push({ id: Date.now(), text, completed: false }); input.value = ''; document.getElementById('taskInputSection').style.display = 'none'; saveAll(); renderSelectedDateTasks(); renderHomeTasksList(); rescheduleAllReminders(); }
+function toggleCalTask(idx) { state.calendarTasks[selectedCalDateStr][idx].completed = !state.calendarTasks[selectedCalDateStr][idx].completed; saveAll(); renderSelectedDateTasks(); renderHomeTasksList(); rescheduleAllReminders(); }
+function removeCalTask(idx) { state.calendarTasks[selectedCalDateStr].splice(idx, 1); saveAll(); renderSelectedDateTasks(); renderHomeTasksList(); rescheduleAllReminders(); }
 function renderFocusPage() { const punchBtn = document.getElementById('punchBtn'); const title = document.getElementById('lockInStatusTitle'); const timerDisplay = document.getElementById('lockInTimerDisplay'); if (state.isLockedIn) {
     punchBtn.classList.add('active');
     title.textContent = 'Locked in for';
@@ -1572,10 +1568,10 @@ function confirmLockOff() { if (todayTasks().some(t => !t.completed))
 function startLockInSession() { if (praiseTimeoutHandle) {
     clearTimeout(praiseTimeoutHandle);
     praiseTimeoutHandle = null;
-} state.isLockedIn = true; state.lockInStartTimestamp = Date.now(); saveAll(); renderFocusPage(); renderHome(); }
+} state.isLockedIn = true; state.lockInStartTimestamp = Date.now(); saveAll(); rescheduleAllReminders(); renderFocusPage(); renderHome(); }
 function completeLockOffSession() { if (!state.isLockedIn)
     return; if (!state.lockInStartTimestamp)
-    state.lockInStartTimestamp = Date.now(); const elapsedSecs = Math.max(1, Math.floor((Date.now() - state.lockInStartTimestamp) / 1000)); const todayKey = getTodayDateKey(); const sessionSecs = Math.min(MAX_SESSION_SECS, elapsedSecs); state.focusSeconds[todayKey] = (state.focusSeconds[todayKey] || 0) + sessionSecs; state.isLockedIn = false; state.lockInStartTimestamp = null; saveAll(); renderFocusPage(); renderHome(); applyTieredPraise(sessionSecs); }
+    state.lockInStartTimestamp = Date.now(); const elapsedSecs = Math.max(1, Math.floor((Date.now() - state.lockInStartTimestamp) / 1000)); const todayKey = getTodayDateKey(); const sessionSecs = Math.min(MAX_SESSION_SECS, elapsedSecs); state.focusSeconds[todayKey] = (state.focusSeconds[todayKey] || 0) + sessionSecs; state.isLockedIn = false; state.lockInStartTimestamp = null; saveAll(); rescheduleAllReminders(); renderFocusPage(); renderHome(); applyTieredPraise(sessionSecs); }
 function applyTieredPraise(secs) { const todayKey = getTodayDateKey(); if (state.focusPraiseDate !== todayKey) {
     state.focusPraiseDate = todayKey;
     state.focusPraiseTier = -1;
@@ -1859,41 +1855,13 @@ loadAll();
 renderNav();
 renderHome();
 renderBlocker();
-rescheduleAllReminders();
-setInterval(enforceSessionCap, 30000);
-document.addEventListener('visibilitychange', function () { if (!document.hidden)
-    enforceSessionCap(); });
 enforceSessionCap();
-if (state.isLockedIn && state.lockInStartTimestamp && (Date.now() - state.lockInStartTimestamp) >= 43200000)
-    completeLockOffSession();
-</script>
-<script>async function enableReminderPermissionIfNeeded() {
-    try {
-        if (!window.Capacitor?.isNativePlatform?.())
-            return;
-        await window.LockedInNotifications.requestPermission();
-    }
-    catch (e) {
-        console.error('Notification permission:', e);
-    }
-}
-async function rescheduleAllReminders() {
-    try {
-        if (!window.Capacitor?.isNativePlatform?.())
-            return;
-        if (!window.LockedInNotifications)
-            return;
-        const granted = await window.LockedInNotifications.requestPermission();
-        if (!granted)
-            return;
-        if (typeof clearAllReminderTimeouts === 'function') {
-            clearAllReminderTimeouts();
-        }
-        await window.LockedInNotifications.reschedule(state.routine);
-    }
-    catch (e) {
-        console.error('Notification scheduling:', e);
-    }
-}
+rescheduleAllReminders();
+setInterval(enforceSessionCap, 1000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) {
+    enforceSessionCap();
+    rescheduleAllReminders();
+} });
+enforceSessionCap();
 </script>
 </body></html>
