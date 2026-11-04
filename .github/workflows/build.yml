@@ -34,7 +34,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Configure exact alarms and Locked In notification icon
+      - name: Configure exact alarms and Locked In notification icons
         run: |
           pip install pillow
           python3 - <<'PY'
@@ -58,7 +58,15 @@ jobs:
           drawable = Path("android/app/src/main/res/drawable")
           drawable.mkdir(parents=True, exist_ok=True)
           icon.save(drawable / "ic_stat_locked_in.png")
-          print("Exact-alarm permission and monochrome Locked In notification icon configured.")
+
+          # Keep the exact original charcoal-background logo for the notification card.
+          drawable_nodpi = Path("android/app/src/main/res/drawable-nodpi")
+          drawable_nodpi.mkdir(parents=True, exist_ok=True)
+          Image.open("www/icon-512.png").convert("RGBA").save(
+              drawable_nodpi / "ic_large_locked_in.png"
+          )
+
+          print("Exact-alarm permission, monochrome status icon, and full-colour notification icon configured.")
           PY
 
       - name: Match native splash screen
@@ -104,7 +112,6 @@ jobs:
 
       - name: Generate Android launcher icons
         run: |
-          pip install pillow
           python3 - <<'PY'
           from PIL import Image
           from pathlib import Path
