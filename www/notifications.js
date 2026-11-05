@@ -196,7 +196,7 @@ async function syncDailyTaskReminder(tasks) {
       body: pendingTasks.length + ' unfinished task' + (pendingTasks.length === 1 ? '' : 's') + ' waiting. Open Locked In to review them.',
       largeIcon: BRAND_LARGE_ICON,
       largeBody: taskNames.join('\n') + more,
-      schedule: { at: reminderTime, allowWhileIdle: ALLOW_IDLE }
+      schedule: { at: reminderTime, allowWhileIdle: ALLOW_IDLE_OTHER }
     }]
   });
 }
