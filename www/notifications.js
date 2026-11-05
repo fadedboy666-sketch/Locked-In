@@ -136,7 +136,7 @@ function buildRoutineNotifications(routine) {
           title: 'Time for ' + name,
           body: 'Your scheduled habit is waiting. Stay consistent and get it done.',
           largeIcon: BRAND_LARGE_ICON,
-          schedule: { at: fireAt, allowWhileIdle: ALLOW_IDLE }
+          schedule: { at: fireAt, allowWhileIdle: ALLOW_IDLE_ROUTINE }
         });
       }
     });
