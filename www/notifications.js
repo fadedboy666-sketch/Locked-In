@@ -78,8 +78,7 @@ async function requestPermission() {
       }
     }
     if (exact.exact_alarm !== 'granted') {
-      console.warn('[LockedIn] Exact alarm access is not granted. Reminders may not be punctual.');
-      return false;
+  console.warn('[LockedIn] Exact alarm permission is not granted. Android may use inexact alarms.');
     }
   }
   return true;
