@@ -173,7 +173,7 @@ async function syncSession(sessionStartTimestamp) {
       title: 'Your 12-hour session limit has been reached',
       body: 'Open Locked In to end your session and take a break.',
       largeIcon: BRAND_LARGE_ICON,
-      schedule: { at: new Date(deadline), allowWhileIdle: ALLOW_IDLE }
+      schedule: { at: new Date(deadline), allowWhileIdle: ALLOW_IDLE_OTHER }
     }]
   });
 }
