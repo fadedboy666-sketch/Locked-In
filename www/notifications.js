@@ -11,7 +11,7 @@ const WINDOW_DAYS = 14;
 const MAX_ROUTINE_ALARMS = 400;
 const CHUNK_SIZE = 50;
 const ALLOW_IDLE_ROUTINE = true;
-const ALLOW_IDLE_OTHER = false;
+const ALLOW_IDLE_OTHER = true;
 
 let syncQueue = Promise.resolve();
 
