@@ -27,6 +27,10 @@ jobs:
 
       - name: Bundle native notifications
         run: npx --yes esbuild@0.24.2 www/notifications.js --bundle --format=iife --outfile=www/notifications.bundle.js
+        
+      - name: Bundle native backup plugins
+        run: npx --yes esbuild@0.24.2 www/backup.js --bundle --format=iife --outfile=www/backup.bundle.js
+
 
       - name: Add Android platform
         run: npx cap add android
