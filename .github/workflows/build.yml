@@ -35,6 +35,26 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Configure Firebase Android
+        run: |
+          cp firebase/google-services.json android/app/google-services.json
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/variables.gradle")
+          content = path.read_text()
+
+          if "rgcfaIncludeGoogle" not in content:
+              content = content.replace(
+                  "ext {",
+                  "ext {\n    rgcfaIncludeGoogle = true\n    androidxCredentialsVersion = '1.3.0'",
+                  1
+              )
+
+          path.write_text(content)
+          print("Firebase Google sign-in settings added.")
+          PY
+
       - name: Sync Capacitor
         run: npx cap sync android
 
