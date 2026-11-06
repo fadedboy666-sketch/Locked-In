@@ -114,7 +114,7 @@ jobs:
 
           splash = '''<?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item android:drawable="#222326" />
+              <item android:drawable="@color/lockedin_splash_background" />
               <item
                   android:drawable="@mipmap/ic_launcher"
                   android:gravity="center" />
