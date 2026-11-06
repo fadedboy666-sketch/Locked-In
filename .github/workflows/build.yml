@@ -69,45 +69,61 @@ jobs:
           print("Exact-alarm permission, monochrome status icon, and full-colour notification icon configured.")
           PY
 
-      - name: Match native splash screen
+      - name: Configure Locked In native splash screen
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          path = Path("android/app/src/main/res/values/styles.xml")
-          content = path.read_text()
+          styles = Path("android/app/src/main/res/values/styles.xml")
+          content = styles.read_text()
 
           pattern = r'(<style name="AppTheme\.NoActionBarLaunch"[^>]*>)(.*?)(</style>)'
-
           match = re.search(pattern, content, re.S)
+
           if not match:
-              raise SystemExit("Launch theme not found. Build stopped safely.")
+              raise SystemExit("Launch theme not found. Build stopped.")
 
           block = match.group(2)
 
           items = {
+              "android:background": "@drawable/lockedin_splash",
               "windowSplashScreenBackground": "#222326",
               "windowSplashScreenAnimatedIcon": "@mipmap/ic_launcher",
-              "postSplashScreenTheme": "@style/AppTheme.NoActionBar",
-              "android:windowBackground": "#222326"
+              "postSplashScreenTheme": "@style/AppTheme.NoActionBar"
           }
 
           for name, value in items.items():
-              tag = name
-              item = f'<item name="{tag}">{value}</item>'
-              pattern_item = rf'<item name="{re.escape(tag)}">.*?</item>'
+              item = f'<item name="{name}">{value}</item>'
+              pattern_item = rf'<item name="{re.escape(name)}">.*?</item>'
 
               if re.search(pattern_item, block):
-                  block = re.sub(pattern_item, item, block)
+                  block = re.sub(pattern_item, lambda _: item, block)
               else:
                   block += "\n        " + item
 
-          updated = match.group(1) + block + match.group(3)
-          content = content[:match.start()] + updated + content[match.end():]
-          path.write_text(content)
+          content = (
+              content[:match.start()]
+              + match.group(1) + block + match.group(3)
+              + content[match.end():]
+          )
+          styles.write_text(content)
 
-          print("Native splash theme updated.")
+          drawable = Path("android/app/src/main/res/drawable")
+          drawable.mkdir(parents=True, exist_ok=True)
+
+          splash = '''<?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="#222326" />
+              <item
+                  android:drawable="@mipmap/ic_launcher"
+                  android:gravity="center" />
+          </layer-list>
+          '''
+
+          (drawable / "lockedin_splash.xml").write_text(splash)
+
+          print("Locked In splash screen configured.")
           PY
 
       - name: Generate Android launcher icons
