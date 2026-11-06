@@ -2,10 +2,13 @@
   "appId": "com.lockedin.app",
   "appName": "Locked In",
   "webDir": "www",
-  "plugins": {
+    "plugins": {
     "LocalNotifications": {
       "smallIcon": "ic_stat_locked_in",
       "iconColor": "#FFFFFF"
+    },
+    "FirebaseAuthentication": {
+      "providers": ["google.com"]
     }
-  }
+    }
 }
