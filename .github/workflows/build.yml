@@ -35,14 +35,17 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      
       - name: Configure Firebase Android
         run: |
           cp firebase/google-services.json android/app/google-services.json
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
-          path = Path("android/variables.gradle")
-          content = path.read_text()
+          # Enable Google sign-in dependencies
+          variables = Path("android/variables.gradle")
+          content = variables.read_text()
 
           if "rgcfaIncludeGoogle" not in content:
               content = content.replace(
@@ -50,10 +53,32 @@ jobs:
                   "ext {\n    rgcfaIncludeGoogle = true\n    androidxCredentialsVersion = '1.3.0'",
                   1
               )
+          variables.write_text(content)
 
-          path.write_text(content)
-          print("Firebase Google sign-in settings added.")
+          # Add Google's Gradle plugin to the main build file
+          root = Path("android/build.gradle")
+          content = root.read_text()
+
+          if "com.google.gms:google-services" not in content:
+              content = re.sub(
+                  r"dependencies\s*\{",
+                  "dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'",
+                  content,
+                  count=1
+              )
+          root.write_text(content)
+
+          # Activate the plugin for the app
+          app = Path("android/app/build.gradle")
+          content = app.read_text()
+
+          if "com.google.gms.google-services" not in content:
+              content += "\napply plugin: 'com.google.gms.google-services'\n"
+          app.write_text(content)
+
+          print("Firebase Android Gradle configuration completed.")
           PY
+
 
       - name: Sync Capacitor
         run: npx cap sync android
