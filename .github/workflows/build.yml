@@ -57,28 +57,7 @@ jobs:
 
           drawable = Path("android/app/src/main/res/drawable")
           drawable.mkdir(parents=True, exist_ok=True)
-          values = Path("android/app/src/main/res/values")
-values.mkdir(parents=True, exist_ok=True)
-
-colors = values / "colors.xml"
-
-if colors.exists():
-    color_content = colors.read_text()
-else:
-    color_content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
-
-color_item = '<color name="lockedin_splash_background">#222326</color>'
-color_pattern = r'<color name="lockedin_splash_background">.*?</color>'
-
-if re.search(color_pattern, color_content):
-    color_content = re.sub(color_pattern, color_item, color_content)
-else:
-    color_content = color_content.replace(
-        "</resources>",
-        "    " + color_item + "\n</resources>"
-    )
-
-colors.write_text(color_content)
+          
           icon.save(drawable / "ic_stat_locked_in.png")
 
           # Keep the exact original charcoal-background logo for the notification card.
