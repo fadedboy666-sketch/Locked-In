@@ -112,7 +112,7 @@ jobs:
 
           drawable = Path("android/app/src/main/res/drawable")
           drawable.mkdir(parents=True, exist_ok=True)
-                    values = Path("android/app/src/main/res/values")
+          values = Path("android/app/src/main/res/values")
           values.mkdir(parents=True, exist_ok=True)
 
           colors = values / "colors.xml"
