@@ -7,6 +7,8 @@ const ROUTINE_MAX_ID = 999999999;
 const SESSION_ID = 1900000001;
 const DAILY_TASK_ID = 1900000002;
 const BRAND_LARGE_ICON = 'ic_large_locked_in';
+const BRAND_SMALL_ICON = 'ic_stat_locked_in';
+const BRAND_ICON_COLOR = '#292929';
 const WINDOW_DAYS = 14;
 const MAX_ROUTINE_ALARMS = 400;
 const CHUNK_SIZE = 50;
@@ -105,7 +107,51 @@ async function cancelManagedNotifications() {
   await cancelIds(ids);
 }
 
-function buildRoutineNotifications(routine) {
+function notificationCopyForHabit(item, name) {
+  const generic = {
+    title: 'Habit reminder',
+    body: "Stay consistent. It's time to complete your habit."
+  };
+
+  // User-created habits always keep the neutral custom-habit reminder.
+  if (item?.isCustom) return generic;
+
+  const presetId = String(item?.presetId || '').trim().toLowerCase();
+  const presetMessages = {
+    workout: { title: 'Workout time 💪', body: 'Time to get your workout done.' },
+    run: { title: 'Time to run 🏃', body: 'Get moving and enjoy your run.' },
+    walk: { title: 'Take a walk 🚶', body: 'Step away and get some fresh air.' },
+    water: { title: 'Drink some water 💧', body: 'Take a moment to hydrate.' },
+    study: { title: 'Focus time 📚', body: 'Put distractions aside and study.' },
+    pray: { title: 'Time for prayer 🙏', body: 'Take a moment to pray.' }
+  };
+
+  if (presetMessages[presetId]) return presetMessages[presetId];
+
+  // Name fallback supports older saved built-in habits without presetId.
+  const normalizedName = String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  const nameAliases = {
+    workout: 'workout',
+    run: 'run',
+    running: 'run',
+    walk: 'walk',
+    walking: 'walk',
+    'drink water': 'water',
+    water: 'water',
+    study: 'study',
+    pray: 'pray',
+    prayer: 'pray'
+  };
+  const fallbackId = nameAliases[normalizedName];
+  return fallbackId && presetMessages[fallbackId]
+    ? presetMessages[fallbackId]
+    : generic;
+}
+
+function buildRoutineNotifications(routine, routineLog = {}) {
   const allocateId = makeIdAllocator();
   const now = Date.now();
   const notifications = [];
@@ -130,11 +176,18 @@ function buildRoutineNotifications(routine) {
         const dayCode = ALL_DAYS[(fireAt.getDay() + 6) % 7];
         if (!days.includes(dayCode)) continue;
 
+        const dateKey = [fireAt.getFullYear(), String(fireAt.getMonth() + 1).padStart(2, '0'), String(fireAt.getDate()).padStart(2, '0')].join('-');
+        const completionKey = slot + '|' + name.toLowerCase();
+        if (routineLog[dateKey] && routineLog[dateKey][completionKey] === 1) continue;
+
         const identity = [slot, index, name, time, fireAt.getFullYear(), fireAt.getMonth(), fireAt.getDate()].join('|');
+        const copy = notificationCopyForHabit(item, name);
         notifications.push({
           id: allocateId(identity),
-          title: 'Time for ' + name,
-          body: 'Your scheduled habit is waiting. Stay consistent and get it done.',
+          title: copy.title,
+          body: copy.body,
+          smallIcon: BRAND_SMALL_ICON,
+          iconColor: BRAND_ICON_COLOR,
           largeIcon: BRAND_LARGE_ICON,
           schedule: { at: fireAt, allowWhileIdle: ALLOW_IDLE_ROUTINE }
         });
@@ -156,8 +209,8 @@ async function scheduleInChunks(notifications) {
   }
 }
 
-async function syncRoutine(routine) {
-  const notifications = buildRoutineNotifications(routine);
+async function syncRoutine(routine, routineLog) {
+  const notifications = buildRoutineNotifications(routine, routineLog);
   await scheduleInChunks(notifications);
   console.info('[LockedIn] Routine reminders scheduled:', notifications.length);
 }
@@ -172,7 +225,9 @@ async function syncSession(sessionStartTimestamp) {
       id: SESSION_ID,
       title: 'Your 12-hour session limit has been reached',
       body: 'Open Locked In to end your session and take a break.',
-      largeIcon: BRAND_LARGE_ICON,
+      smallIcon: BRAND_SMALL_ICON,
+          iconColor: BRAND_ICON_COLOR,
+          largeIcon: BRAND_LARGE_ICON,
       schedule: { at: new Date(deadline), allowWhileIdle: ALLOW_IDLE_OTHER }
     }]
   });
@@ -194,21 +249,23 @@ async function syncDailyTaskReminder(tasks) {
       id: DAILY_TASK_ID,
       title: 'Your day is not over yet',
       body: pendingTasks.length + ' unfinished task' + (pendingTasks.length === 1 ? '' : 's') + ' waiting. Open Locked In to review them.',
-      largeIcon: BRAND_LARGE_ICON,
+      smallIcon: BRAND_SMALL_ICON,
+          iconColor: BRAND_ICON_COLOR,
+          largeIcon: BRAND_LARGE_ICON,
       largeBody: taskNames.join('\n') + more,
       schedule: { at: reminderTime, allowWhileIdle: ALLOW_IDLE_OTHER }
     }]
   });
 }
 
-async function syncAllNow({ routine, sessionStartTimestamp, dailyTasks } = {}) {
+async function syncAllNow({ routine, routineLog, sessionStartTimestamp, dailyTasks } = {}) {
   try {
     const granted = await requestPermission();
     if (!granted) return false;
 
     await cancelManagedNotifications();
     await Promise.all([
-      syncRoutine(routine || {}),
+      syncRoutine(routine || {}, routineLog || {}),
       syncSession(sessionStartTimestamp),
       syncDailyTaskReminder(dailyTasks)
     ]);
