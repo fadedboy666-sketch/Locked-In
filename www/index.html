@@ -1891,6 +1891,42 @@ catch (e) { } ensureRoutinePresets(); if (!state.firstUseDate)
     state.firstUseDate = inferFirstUseDate(); migrateAllHabits(); recomputeStreak(); commitRoutineVersionIfChanged(); rebuildRoutineTrackerHistory(); saveAll(); }
 initRoutineDrag();
 loadAll();
+  window.LockedInFirebase.watchAuthState(async user => {
+  if (!user) return;
+
+  const syncKey = 'lockedin_cloud_loaded_' + user.uid;
+
+  if (sessionStorage.getItem(syncKey)) return;
+
+  try {
+    const localRaw = localStorage.getItem('lockedin_master_v6');
+    const localData = JSON.parse(localRaw || '{}');
+
+    const result = await window.LockedInFirebase.syncUserData(localData);
+
+    if (result.exists) {
+      if (localRaw && !localStorage.getItem('lockedin_precloud_backup_v1')) {
+        localStorage.setItem('lockedin_precloud_backup_v1', localRaw);
+      }
+
+      localStorage.setItem(
+        'lockedin_master_v6',
+        JSON.stringify(result.data)
+      );
+
+      sessionStorage.setItem(syncKey, '1');
+      location.reload();
+      return;
+    }
+
+    sessionStorage.setItem(syncKey, '1');
+
+  } catch (error) {
+    console.error('Initial cloud sync failed:', error);
+  }
+}).catch(error => {
+  console.error('Authentication listener failed:', error);
+});
 renderNav();
 renderHome();
 renderBlocker();
