@@ -7,14 +7,21 @@ on:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+
     steps:
       - name: Generate permanent signing key
         env:
           STORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASS: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          keytool -genkeypair -v \
+          set -e
+
+          keytool -genkeypair \
             -keystore lockedin-release.jks \
             -storepass "$STORE_PASS" \
             -keypass "$KEY_PASS" \
@@ -24,18 +31,12 @@ jobs:
             -validity 10000 \
             -dname "CN=Locked In, OU=App, O=Locked In, L=Butwal, ST=Lumbini, C=NP"
 
-          keytool -list -v \
+          FINGERPRINT=$(keytool -list -v \
             -keystore lockedin-release.jks \
             -storepass "$STORE_PASS" \
-            -alias "$KEY_ALIAS" > fingerprint.txt
+            -alias "$KEY_ALIAS" | grep "SHA1:" | head -1 | sed 's/.*SHA1: //')
 
-          base64 -w 0 lockedin-release.jks > keystore-base64.txt
+          KEY_BASE64=$(base64 -w 0 lockedin-release.jks)
 
-      - name: Save generated key temporarily
-        uses: actions/upload-artifact@v4
-        with:
-          name: LockedIn-Signing-Key
-          path: |
-            fingerprint.txt
-            keystore-base64.txt
-          retention-days: 1
+          gh secret set ANDROID_KEYSTORE_BASE64 --body "$KEY_BASE64" --repo "$GITHUB_REPOSITORY"
+          echo "SHA-1 fingerprint: $FINGERPRINT"
