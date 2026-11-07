@@ -30,6 +30,8 @@ jobs:
         
       - name: Bundle native backup plugins
         run: npx --yes esbuild@0.24.2 www/backup.js --bundle --format=iife --outfile=www/backup.bundle.js
+      - name: Bundle Firebase
+        run: npx --yes esbuild@0.24.2 www/firebase.js --bundle --format=iife --outfile=www/firebase.bundle.js
 
 
       - name: Add Android platform
