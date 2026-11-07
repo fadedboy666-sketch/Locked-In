@@ -1,6 +1,6 @@
-
 import { Capacitor } from '@capacitor/core';
 import { initializeApp, getApps, getApp } from 'firebase/app';
+
 import {
   getAuth,
   initializeAuth,
@@ -11,7 +11,14 @@ import {
   onAuthStateChanged,
   signOut as firebaseSignOut
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc
+} from 'firebase/firestore';
+
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 
 const firebaseConfig = {
@@ -50,6 +57,12 @@ async function getFirebaseAuth() {
 }
 
 const db = getFirestore(app);
+const cloudReadyUsers = new Set();
+const saveTimers = {};
+
+function userDocument(uid) {
+  return doc(db, 'users', uid, 'appData', 'main');
+}
 
 async function signInWithGoogle() {
   const auth = await getFirebaseAuth();
@@ -60,22 +73,91 @@ async function signInWithGoogle() {
     });
 
     const idToken = result.credential?.idToken;
+
     if (!idToken) {
       throw new Error('Google sign-in did not return an ID token.');
     }
 
     const credential = GoogleAuthProvider.credential(idToken);
     const userCredential = await signInWithCredential(auth, credential);
+
     return userCredential.user;
   }
 
   const provider = new GoogleAuthProvider();
   const userCredential = await signInWithPopup(auth, provider);
+
   return userCredential.user;
+}
+
+async function syncUserData(localData) {
+  const auth = await getFirebaseAuth();
+  const user = auth.currentUser;
+
+  if (!user) throw new Error('No signed-in user.');
+
+  const reference = userDocument(user.uid);
+  const snapshot = await getDoc(reference);
+
+  if (snapshot.exists()) {
+    const cloudData = snapshot.data().data;
+
+    if (!cloudData || typeof cloudData !== 'object') {
+      throw new Error('Cloud backup data is invalid.');
+    }
+
+    cloudReadyUsers.add(user.uid);
+
+    return {
+      exists: true,
+      data: cloudData
+    };
+  }
+
+  await setDoc(reference, {
+    data: localData || {},
+    updatedAt: Date.now()
+  });
+
+  cloudReadyUsers.add(user.uid);
+
+  return {
+    exists: false,
+    data: null
+  };
+}
+
+function saveUserData(data) {
+  getFirebaseAuth().then(auth => {
+    const user = auth.currentUser;
+
+    if (!user || !cloudReadyUsers.has(user.uid)) return;
+
+    clearTimeout(saveTimers[user.uid]);
+
+    saveTimers[user.uid] = setTimeout(async () => {
+      try {
+        await setDoc(userDocument(user.uid), {
+          data,
+          updatedAt: Date.now()
+        });
+      } catch (error) {
+        console.error('Cloud save failed:', error);
+      }
+    }, 1000);
+  }).catch(error => {
+    console.error('Cloud authentication error:', error);
+  });
 }
 
 async function signOut() {
   const auth = await getFirebaseAuth();
+  const uid = auth.currentUser?.uid;
+
+  if (uid) {
+    clearTimeout(saveTimers[uid]);
+    cloudReadyUsers.delete(uid);
+  }
 
   if (Capacitor.isNativePlatform()) {
     try {
@@ -99,5 +181,7 @@ window.LockedInFirebase = {
   getAuth: getFirebaseAuth,
   signInWithGoogle,
   signOut,
-  watchAuthState
+  watchAuthState,
+  syncUserData,
+  saveUserData
 };
