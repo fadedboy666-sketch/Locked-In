@@ -12,7 +12,20 @@
           "package_name": "com.lockedin.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "498563149400-jue227plglc7lqnkm7br13trkbh75h44.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lockedin.app",
+            "certificate_hash": "518cd4fb68f0d618483bacb1bb008e86f430b1cf"
+          }
+        },
+        {
+          "client_id": "498563149400-qctrg6ka7jip3pv46aqtt0muo16bb4nq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCfG2YP7IxCrnQDdsY4_ws8Qyx69v5bDB0"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "498563149400-qctrg6ka7jip3pv46aqtt0muo16bb4nq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
