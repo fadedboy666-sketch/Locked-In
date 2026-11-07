@@ -1853,6 +1853,9 @@ function saveAll() { try {
     syncActiveRoutinePreset();
     commitRoutineVersionIfChanged();
     localStorage.setItem('lockedin_master_v6', JSON.stringify({ streakStart: state.streakStart ? state.streakStart.toISOString() : null, everStarted: state.everStarted, lapsed: state.lapsed, allTimeHigh: state.allTimeHigh, lostStreaks: state.lostStreaks, userName: state.userName, selectedAvatarKey: state.selectedAvatarKey, yearlyGoals: state.yearlyGoals, blocked: state.blocked, routine: state.routine, routinePresets: state.routinePresets, activeRoutineId: state.activeRoutineId, trackerHabits: state.trackerHabits, calendarTasks: state.calendarTasks, focusSeconds: state.focusSeconds, focusPraiseDate: state.focusPraiseDate, focusPraiseTier: state.focusPraiseTier, isLockedIn: state.isLockedIn, lockInStartTimestamp: state.lockInStartTimestamp, firstUseDate: state.firstUseDate, routineVersions: state.routineVersions, routineLog: state.routineLog, praiseDate: state.praiseDate, praiseTiersShown: state.praiseTiersShown }));
+  window.LockedInFirebase?.saveUserData(
+  JSON.parse(localStorage.getItem('lockedin_master_v6'))
+);
 }
 catch (e) { } }
 function loadAll() { state.streakStart = todayMidnight(); try {
