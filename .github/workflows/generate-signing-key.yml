@@ -8,18 +8,20 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     permissions:
-      actions: write
       contents: read
 
     steps:
-      - name: Generate permanent signing key
+      - name: Generate and encrypt signing key
         env:
           STORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASS: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          GH_TOKEN: ${{ github.token }}
         run: |
-          set -e
+          set -euo pipefail
+
+          test -n "$STORE_PASS"
+          test -n "$KEY_PASS"
+          test -n "$KEY_ALIAS"
 
           keytool -genkeypair \
             -keystore lockedin-release.jks \
@@ -31,12 +33,24 @@ jobs:
             -validity 10000 \
             -dname "CN=Locked In, OU=App, O=Locked In, L=Butwal, ST=Lumbini, C=NP"
 
-          FINGERPRINT=$(keytool -list -v \
+          echo "SHA-1 fingerprint:"
+          keytool -list -v \
             -keystore lockedin-release.jks \
             -storepass "$STORE_PASS" \
-            -alias "$KEY_ALIAS" | grep "SHA1:" | head -1 | sed 's/.*SHA1: //')
+            -alias "$KEY_ALIAS" | grep -i "SHA1:"
 
-          KEY_BASE64=$(base64 -w 0 lockedin-release.jks)
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$STORE_PASS" \
+            --symmetric --cipher-algo AES256 \
+            --output lockedin-release.jks.gpg \
+            lockedin-release.jks
 
-          gh secret set ANDROID_KEYSTORE_BASE64 --body "$KEY_BASE64" --repo "$GITHUB_REPOSITORY"
-          echo "SHA-1 fingerprint: $FINGERPRINT"
+          base64 -w 0 lockedin-release.jks.gpg > keystore-encrypted-base64.txt
+          rm -f lockedin-release.jks
+
+      - name: Upload encrypted key backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: LockedIn-Encrypted-Signing-Key
+          path: keystore-encrypted-base64.txt
+          retention-days: 1
