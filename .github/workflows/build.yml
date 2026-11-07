@@ -301,8 +301,14 @@ jobs:
           print("Android launcher icons generated successfully.")
           PY
 
+      
       - name: Build debug APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
