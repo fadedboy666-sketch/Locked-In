@@ -122,8 +122,7 @@ jobs:
           if "debug {" not in content:
               content = content.replace(
                   "    buildTypes {",
-                  "    buildTypes {\\n        debug { signingConfig signingConfigs.release }",
-                  1
+                  "    buildTypes {\n        debug { signingConfig signingConfigs.release }",
               )
 
           path.write_text(content)
