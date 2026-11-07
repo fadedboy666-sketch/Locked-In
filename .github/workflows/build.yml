@@ -82,6 +82,54 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
+        
+      - name: Restore permanent signing key
+        env:
+          KEYSTORE_ENCRYPTED_BASE64: ${{ secrets.KEYSTORE_ENCRYPTED_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          printf '%s' "$KEYSTORE_ENCRYPTED_BASE64" | base64 --decode > encrypted-key.gpg
+
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$KEYSTORE_PASSWORD" \
+            --decrypt encrypted-key.gpg > android/app/lockedin-release.jks
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/app/build.gradle")
+          content = path.read_text()
+
+          signing = """
+              signingConfigs {
+                  release {
+                      storeFile file("lockedin-release.jks")
+                      storePassword System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS")
+                      keyPassword System.getenv("KEY_PASSWORD")
+                  }
+              }
+
+          """
+
+          if "signingConfigs {" not in content:
+              content = content.replace("    buildTypes {", signing + "    buildTypes {", 1)
+
+          if "debug {" not in content:
+              content = content.replace(
+                  "    buildTypes {",
+                  "    buildTypes {\\n        debug { signingConfig signingConfigs.release }",
+                  1
+              )
+
+          path.write_text(content)
+          print("Permanent signing configuration added.")
+          PY
+
 
       - name: Configure exact alarms and Locked In notification icons
         run: |
