@@ -50,15 +50,20 @@ async function getFirebaseAuth() {
           throw error;
         }
       }
+
       return getAuth(app);
     })();
   }
+
   return authPromise;
 }
 
 const db = getFirestore(app);
 const cloudReadyUsers = new Set();
 const saveTimers = {};
+const pendingSaveData = {};
+const savePromises = {};
+const schedulingSaves = new Set();
 
 function userDocument(uid) {
   return doc(db, 'users', uid, 'appData', 'main');
@@ -94,7 +99,9 @@ async function syncUserData(localData) {
   const auth = await getFirebaseAuth();
   const user = auth.currentUser;
 
-  if (!user) throw new Error('No signed-in user.');
+  if (!user) {
+    throw new Error('No signed-in user.');
+  }
 
   const reference = userDocument(user.uid);
   const snapshot = await getDoc(reference);
@@ -127,35 +134,87 @@ async function syncUserData(localData) {
   };
 }
 
+function writeUserData(uid, data) {
+  const previous = savePromises[uid] || Promise.resolve();
+
+  const current = previous.catch(() => {}).then(() =>
+    setDoc(userDocument(uid), {
+      data,
+      updatedAt: Date.now()
+    })
+  );
+
+  savePromises[uid] = current;
+
+  return current;
+}
+
 function saveUserData(data) {
-  getFirebaseAuth().then(auth => {
-    const user = auth.currentUser;
+  const task = (async () => {
+    try {
+      const auth = await getFirebaseAuth();
+      const user = auth.currentUser;
 
-    if (!user || !cloudReadyUsers.has(user.uid)) return;
-
-    clearTimeout(saveTimers[user.uid]);
-
-    saveTimers[user.uid] = setTimeout(async () => {
-      try {
-        await setDoc(userDocument(user.uid), {
-          data,
-          updatedAt: Date.now()
-        });
-      } catch (error) {
-        console.error('Cloud save failed:', error);
+      if (!user || !cloudReadyUsers.has(user.uid)) {
+        return;
       }
-    }, 1000);
-  }).catch(error => {
-    console.error('Cloud authentication error:', error);
-  });
+
+      const uid = user.uid;
+
+      pendingSaveData[uid] = data;
+
+      clearTimeout(saveTimers[uid]);
+
+      saveTimers[uid] = setTimeout(() => {
+        const latest = pendingSaveData[uid];
+
+        delete pendingSaveData[uid];
+        delete saveTimers[uid];
+
+        writeUserData(uid, latest).catch(error => {
+          console.error('Cloud save failed:', error);
+        });
+      }, 1000);
+
+    } catch (error) {
+      console.error('Cloud save scheduling failed:', error);
+    }
+  })();
+
+  schedulingSaves.add(task);
+
+  task.then(() => schedulingSaves.delete(task));
+
+  return task;
 }
 
 async function signOut() {
   const auth = await getFirebaseAuth();
   const uid = auth.currentUser?.uid;
 
+  await Promise.all([...schedulingSaves]);
+
   if (uid) {
     clearTimeout(saveTimers[uid]);
+    delete saveTimers[uid];
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        pendingSaveData,
+        uid
+      )
+    ) {
+      const latest = pendingSaveData[uid];
+
+      delete pendingSaveData[uid];
+
+      await writeUserData(uid, latest);
+    }
+
+    if (savePromises[uid]) {
+      await savePromises[uid];
+    }
+
     cloudReadyUsers.delete(uid);
   }
 
@@ -172,6 +231,7 @@ async function signOut() {
 
 async function watchAuthState(callback) {
   const auth = await getFirebaseAuth();
+
   return onAuthStateChanged(auth, callback);
 }
 
