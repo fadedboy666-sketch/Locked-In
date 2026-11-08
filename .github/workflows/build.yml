@@ -36,6 +36,10 @@ jobs:
 
       - name: Add Android platform
         run: npx cap add android
+      - name: Increase Gradle download timeout
+        run: |
+          sed -i 's/networkTimeout=.*/networkTimeout=120000/' android/gradle/wrapper/gradle-wrapper.properties
+          grep -q '^networkTimeout=' android/gradle/wrapper/gradle-wrapper.properties || echo 'networkTimeout=120000' >> android/gradle/wrapper/gradle-wrapper.properties
 
       
       - name: Configure Firebase Android
