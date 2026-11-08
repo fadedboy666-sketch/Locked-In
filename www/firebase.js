@@ -3,6 +3,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 
 import {
   getAuth,
+  getAdditionalUserInfo,
   initializeAuth,
   indexedDBLocalPersistence,
   GoogleAuthProvider,
@@ -71,6 +72,7 @@ function userDocument(uid) {
 
 async function signInWithGoogle() {
   const auth = await getFirebaseAuth();
+  let userCredential;
 
   if (Capacitor.isNativePlatform()) {
     const result = await FirebaseAuthentication.signInWithGoogle({
@@ -84,15 +86,16 @@ async function signInWithGoogle() {
     }
 
     const credential = GoogleAuthProvider.credential(idToken);
-    const userCredential = await signInWithCredential(auth, credential);
-
-    return userCredential.user;
+    userCredential = await signInWithCredential(auth, credential);
+  } else {
+    const provider = new GoogleAuthProvider();
+    userCredential = await signInWithPopup(auth, provider);
   }
 
-  const provider = new GoogleAuthProvider();
-  const userCredential = await signInWithPopup(auth, provider);
-
-  return userCredential.user;
+  return {
+    user: userCredential.user,
+    isNewUser: !!getAdditionalUserInfo(userCredential)?.isNewUser
+  };
 }
 
 async function syncUserData(localData) {
