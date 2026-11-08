@@ -71,7 +71,10 @@ async function clearAuthenticatedSession(auth) {
   if (auth.currentUser) await firebaseSignOut(auth);
 }
 
-async function signInWithGoogle(action, initialData = {}) {
+async function signInWithGoogle(action, _initialData = {}) {
+  if (action !== 'signup' && action !== 'signin') {
+    throw new Error('Choose Sign Up or Sign In to continue.');
+  }
   const auth = await getFirebaseAuth();
   let userCredential;
   try {
@@ -103,11 +106,8 @@ async function signInWithGoogle(action, initialData = {}) {
     }
 
     if (action === 'signup') {
-      await setDoc(reference, {
-        data: initialData && typeof initialData === 'object' ? initialData : {},
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      });
+      // Never copy shared device storage into a new account.
+      await setDoc(reference, { data: {}, createdAt: Date.now(), updatedAt: Date.now() });
     }
     cloudReadyUsers.add(user.uid);
     return { user, isNewUser: !!getAdditionalUserInfo(userCredential)?.isNewUser, isNewAccount: action === 'signup' };
@@ -131,7 +131,7 @@ async function prepareCloudSync() {
   return true;
 }
 
-async function syncUserData(localData) {
+async function syncUserData(_ignoredLocalData = {}) {
   const auth = await getFirebaseAuth();
   const user = auth.currentUser;
   if (!user) throw new Error('No signed-in user.');
@@ -139,13 +139,17 @@ async function syncUserData(localData) {
   const snapshot = await getDoc(reference);
   if (snapshot.exists()) {
     const cloudData = snapshot.data()?.data;
-    if (!cloudData || typeof cloudData !== 'object') throw new Error('Cloud backup data is invalid.');
+    if (!cloudData || typeof cloudData !== 'object' || Array.isArray(cloudData)) {
+      throw new Error('Cloud backup data is invalid.');
+    }
     cloudReadyUsers.add(user.uid);
     return { exists: true, data: cloudData };
   }
-  await setDoc(reference, { data: localData || {}, createdAt: Date.now(), updatedAt: Date.now() });
+  // A missing document starts empty. Local data is deliberately never used as a fallback.
+  const emptyData = {};
+  await setDoc(reference, { data: emptyData, createdAt: Date.now(), updatedAt: Date.now() });
   cloudReadyUsers.add(user.uid);
-  return { exists: false, data: null };
+  return { exists: true, data: emptyData };
 }
 
 function writeUserData(uid, data) {
