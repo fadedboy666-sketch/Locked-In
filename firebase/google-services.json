@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "498563149400-jue227plglc7lqnkm7br13trkbh75h44.apps.googleusercontent.com",
+          "client_id": "498563149400-tfc6qn4fusp0c1a7de0ngf8odif3g9eb.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.lockedin.app",
-            "certificate_hash": "518cd4fb68f0d618483bacb1bb008e86f430b1cf"
+            "certificate_hash": "3db07a831f188ce53c2a5f07ae20c0e4c8e79fd4"
           }
         },
         {
