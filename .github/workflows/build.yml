@@ -36,6 +36,69 @@ jobs:
 
       - name: Add Android platform
         run: npx cap add android
+
+      - name: Install native Internet Filter VPN plugin
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          java_root = Path("android/app/src/main/java")
+          main_activity = next(java_root.rglob("MainActivity.java"), None)
+          if main_activity is None:
+              raise SystemExit("Capacitor MainActivity.java was not generated.")
+          main_text = main_activity.read_text()
+          package_match = re.search(r"^package\s+([\w.]+);", main_text, re.M)
+          if not package_match:
+              raise SystemExit("Could not identify the Android package name.")
+          package_name = package_match.group(1)
+          package_dir = java_root.joinpath(*package_name.split("."))
+          package_dir.mkdir(parents=True, exist_ok=True)
+
+          for filename in ("InternetFilterPlugin.java", "InternetFilterVpnService.java"):
+              source = Path("native") / filename
+              target = package_dir / filename
+              target.write_text(source.read_text().replace("PACKAGE_NAME", package_name))
+
+          if "InternetFilterPlugin" not in main_text:
+              main_text = main_text.replace(
+                  "import com.getcapacitor.BridgeActivity;",
+                  "import com.getcapacitor.BridgeActivity;\nimport " + package_name + ".InternetFilterPlugin;\nimport android.os.Bundle;"
+              )
+              main_text = main_text.replace(
+                  "public class MainActivity extends BridgeActivity {}",
+                  "public class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        registerPlugin(InternetFilterPlugin.class);\n        super.onCreate(savedInstanceState);\n    }\n}"
+              )
+              if "registerPlugin(InternetFilterPlugin.class)" not in main_text:
+                  raise SystemExit("Could not safely register the Internet Filter plugin.")
+              main_activity.write_text(main_text)
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          xml = manifest.read_text()
+          permission_names = [
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+              "android.permission.POST_NOTIFICATIONS"
+          ]
+          for name in permission_names:
+              if name not in xml:
+                  xml = xml.replace("<application", '<uses-permission android:name="' + name + '" />\n    <application', 1)
+
+          service_name = package_name + ".InternetFilterVpnService"
+          if service_name not in xml:
+              service = (
+                  '    <service android:name="' + service_name + '"\n'
+                  '        android:permission="android.permission.BIND_VPN_SERVICE"\n'
+                  '        android:exported="true"\n'
+                  '        android:foregroundServiceType="specialUse">\n'
+                  '        <intent-filter><action android:name="android.net.VpnService" /></intent-filter>\n'
+                  '        <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="DNS filtering for adult website protection" />\n'
+                  '    </service>\n'
+              )
+              xml = xml.replace("</application>", service + "</application>", 1)
+          manifest.write_text(xml)
+          print("Internet Filter VPN service and Capacitor plugin installed.")
+          PY
       - name: Increase Gradle download timeout
         run: |
           sed -i 's/networkTimeout=.*/networkTimeout=120000/' android/gradle/wrapper/gradle-wrapper.properties
