@@ -106,10 +106,10 @@ async function signInWithGoogle(action, _initialData = {}) {
     }
 
     if (action === 'signup') {
-      // Never copy shared device storage into a new account.
+      // New accounts always start empty. Guest data is never copied into a cloud account.
       await setDoc(reference, { data: {}, createdAt: Date.now(), updatedAt: Date.now() });
     }
-    cloudReadyUsers.add(user.uid);
+    // Cloud writes stay disabled until the app has loaded this user's cloud data.
     return { user, isNewUser: !!getAdditionalUserInfo(userCredential)?.isNewUser, isNewAccount: action === 'signup' };
   } catch (error) {
     if (isGoogleCancellation(error)) {
@@ -142,13 +142,11 @@ async function syncUserData(_ignoredLocalData = {}) {
     if (!cloudData || typeof cloudData !== 'object' || Array.isArray(cloudData)) {
       throw new Error('Cloud backup data is invalid.');
     }
-    cloudReadyUsers.add(user.uid);
+    // Do not enable writes until the caller has installed this data locally.
     return { exists: true, data: cloudData };
   }
-  // A missing document starts empty. Local data is deliberately never used as a fallback.
   const emptyData = {};
   await setDoc(reference, { data: emptyData, createdAt: Date.now(), updatedAt: Date.now() });
-  cloudReadyUsers.add(user.uid);
   return { exists: true, data: emptyData };
 }
 
