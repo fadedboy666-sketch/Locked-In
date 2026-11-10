@@ -49,6 +49,8 @@ const cloudReadyUsers = new Set();
 const saveTimers = new Map();
 const pendingSaveData = new Map();
 const savePromises = new Map();
+const authStateListeners = new Set();
+let authActionInProgress = false;
 
 function userDocument(uid) {
   return doc(db, 'users', uid, 'appData', 'main');
@@ -77,6 +79,7 @@ async function signInWithGoogle(action, _initialData = {}) {
   }
   const auth = await getFirebaseAuth();
   let userCredential;
+  authActionInProgress = true;
   try {
     if (Capacitor.isNativePlatform()) {
       const result = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
@@ -94,13 +97,13 @@ async function signInWithGoogle(action, _initialData = {}) {
 
     if (action === 'signin' && !accountExists) {
       await clearAuthenticatedSession(auth);
-      const error = new Error('No Locked In account exists for this Google account. Choose Sign Up first.');
+      const error = new Error('No account found. Please choose Sign Up to create one.');
       error.code = 'lockedin/account-not-found';
       throw error;
     }
     if (action === 'signup' && accountExists) {
       await clearAuthenticatedSession(auth);
-      const error = new Error('A Locked In account already exists for this Google account. Choose Sign In.');
+      const error = new Error('This account already exists. Please choose Sign In to continue.');
       error.code = 'lockedin/account-already-exists';
       throw error;
     }
@@ -118,6 +121,12 @@ async function signInWithGoogle(action, _initialData = {}) {
       throw cancelled;
     }
     throw error;
+  } finally {
+    authActionInProgress = false;
+    const currentUser = auth.currentUser;
+    queueMicrotask(() => {
+      for (const listener of authStateListeners) listener(currentUser);
+    });
   }
 }
 
@@ -212,7 +221,17 @@ async function signOut() {
 
 async function watchAuthState(callback) {
   const auth = await getFirebaseAuth();
-  return onAuthStateChanged(auth, callback);
+  authStateListeners.add(callback);
+  const unsubscribe = onAuthStateChanged(auth, user => {
+    // Google account existence checks must finish before the app's cloud listener runs.
+    // Otherwise a missing account could be auto-created by syncUserData during sign-in.
+    if (authActionInProgress) return;
+    callback(user);
+  });
+  return () => {
+    authStateListeners.delete(callback);
+    unsubscribe();
+  };
 }
 
 window.addEventListener('pagehide', () => { flushUserData().catch(error => console.error('Cloud flush failed:', error)); });
