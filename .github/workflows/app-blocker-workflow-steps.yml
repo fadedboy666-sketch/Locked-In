@@ -1,0 +1,22 @@
+# Add the first step after "Bundle Firebase" and before "Add Android platform".
+      - name: Bundle App Blocker UI
+        run: |
+          npx --yes esbuild@0.24.2 www/app-blocker.js --bundle --format=iife --outfile=www/app-blocker.bundle.js
+          python3 - <<'PY'
+          from pathlib import Path
+          index = Path('www/index.html')
+          content = index.read_text()
+          tag = '<script src="app-blocker.bundle.js"></script>'
+          if tag not in content:
+              anchor = '<script src="backup.bundle.js"></script>'
+              if anchor in content:
+                  content = content.replace(anchor, tag + anchor, 1)
+              else:
+                  content = content.replace('</body>', tag + '</body>', 1)
+              index.write_text(content)
+          print('App Blocker UI bundle linked.')
+          PY
+
+# Add the second step after "Install native Internet Filter VPN plugin" and before "Increase Gradle download timeout".
+      - name: Install native App Blocker
+        run: python3 native/install_app_blocker.py
