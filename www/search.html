@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title>Locked In Search</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0c10;--card:#15161c;--card2:#1c1e26;--red:#e3364c;--line:#2a2c36;--text:#f2f2f5;--sub:#a1a1aa}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Arial,Roboto,sans-serif;padding:26px 16px 40px}.wrap{width:min(100%,620px);margin:0 auto}.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0 28px;font-size:20px;font-weight:800;letter-spacing:.2px}.brand img{width:38px;height:38px;object-fit:contain;border-radius:10px}.intro{text-align:center;color:var(--sub);font-size:13px;margin-bottom:18px}.searchbox{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;min-height:70px}.gcse-search{min-height:44px}.warning{display:none;margin:18px 0 20px;padding:18px 16px;border:1px solid rgba(227,54,76,.65);border-radius:16px;background:linear-gradient(145deg,#24131a,#17151b);text-align:center;box-shadow:0 8px 26px rgba(0,0,0,.25)}.warning.show{display:block;animation:pop .2s ease}.warning img{width:62px;height:62px;object-fit:contain;border-radius:15px;margin-bottom:8px}.warning h2{font-size:21px;margin:4px 0 8px;color:#fff}.warning p{font-size:14px;line-height:1.5;color:#e6dce0;margin:5px 0}.warning .small{font-size:12px;color:#b8aab0;margin-top:10px}@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}.results{margin-top:16px}.footer{text-align:center;color:#666975;font-size:11px;margin-top:30px}
+/* Keep Google's embedded search controls consistent with the app theme. */
+.gsc-control-cse{background:transparent!important;border:0!important;padding:0!important}.gsc-control-cse table,.gsc-control-cse td{background:transparent!important}.gsc-input-box{background:#fff!important;border-radius:9px!important}.gsc-search-button-v2{background:var(--red)!important;border-color:var(--red)!important;border-radius:9px!important}.gsc-webResult.gsc-result,.gsc-results .gsc-imageResult{background:var(--card)!important;border:1px solid var(--line)!important;border-radius:12px!important;padding:12px!important}.gsc-webResult .gs-title,.gsc-webResult .gs-title b,.gsc-webResult .gs-snippet,.gsc-url-top{color:var(--text)!important}.gsc-results .gsc-cursor-box{color:var(--text)!important}
+</style>
+<script async src="https://cse.google.com/cse.js?cx=46829e9cd88b8462a"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="brand"><img src="icon-512.png" alt="Locked In logo" onerror="this.style.display='none'"><span>LOCKED IN</span></div>
+  <div class="intro">Search with purpose. Stay focused.</div>
+  <section class="searchbox" aria-label="Search"><div class="gcse-search"></div></section>
+  <section id="warning" class="warning" role="status" aria-live="polite">
+    <img src="icon-512.png" alt="Locked In logo" onerror="this.style.display='none'">
+    <h2>Caught you!</h2>
+    <p>Is this helping you achieve your goals?</p>
+    <p><strong>Adult sites are blocked.</strong></p>
+    <p class="small">Take a second, reset your focus, and choose something that moves you forward.</p>
+  </section>
+  <div class="results" aria-label="Search results"></div>
+  <div class="footer">LOCKED IN · Stay focused on what matters.</div>
+</main>
+<script>
+(function(){
+  const warning=document.getElementById('warning');
+  // Normalize punctuation and spacing so variants such as P-U-R-N are caught.
+  const blockedQueryPattern=/(^|[^a-z0-9])(porn|xxx|nsfw|hentai)([^a-z0-9]|$)/i;
+  function check(value){
+    const normalized=String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const flagged=/(porn|xxx|nsfw|hentai)/i.test(normalized);
+    warning.classList.toggle('show',flagged);
+    const results=document.querySelector('.gsc-results-wrapper-visible');
+    if(flagged && results) results.style.display='none';
+    else if(results) results.style.display='';
+  }
+  function bind(){
+    document.querySelectorAll('.gsc-input, input.gsc-input').forEach(input=>{
+      if(input.dataset.lockedInBound==='1')return;
+      input.dataset.lockedInBound='1';
+      input.addEventListener('input',()=>check(input.value));
+      input.addEventListener('change',()=>check(input.value));
+    });
+  }
+  document.addEventListener('submit',function(event){
+    const form=event.target;
+    if(form && form.querySelector && form.querySelector('.gsc-input')){
+      const input=form.querySelector('.gsc-input');
+      const value=input && input.value || '';
+      check(value);
+      const normalized=String(value).toLowerCase().replace(/[^a-z0-9]/g,'');
+      if(/(porn|xxx|nsfw|hentai)/i.test(normalized)){
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const results=document.querySelector('.gsc-results-wrapper-visible');
+        if(results) results.style.display='none';
+      }
+    }
+  },true);
+  const observer=new MutationObserver(bind);
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  bind();
+})();
+</script>
+</body>
+</html>
