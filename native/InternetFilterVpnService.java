@@ -4,6 +4,8 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Build;
@@ -153,10 +155,17 @@ public class InternetFilterVpnService extends VpnService {
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26
                 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
-        builder.setContentTitle("Locked In Internet Filter")
-                .setContentText("Adult-site DNS filtering is active")
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
+        int appIcon = getApplicationInfo().icon;
+        int smallIcon = getResources().getIdentifier("ic_stat_locked_in", "drawable", getPackageName());
+        if (smallIcon == 0) smallIcon = appIcon;
+        builder.setContentTitle("Locked In")
+                .setContentText("Focus protection is active")
+                .setSmallIcon(smallIcon)
                 .setOngoing(true);
+        if (appIcon != 0) {
+            Bitmap largeIcon = BitmapFactory.decodeResource(getResources(), appIcon);
+            if (largeIcon != null) builder.setLargeIcon(largeIcon);
+        }
         if (pending != null) builder.setContentIntent(pending);
         return builder.build();
     }
