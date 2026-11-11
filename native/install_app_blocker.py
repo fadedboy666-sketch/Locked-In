@@ -23,8 +23,10 @@ for filename in ('AppBlockerPlugin.java', 'AppBlockerAccessibilityService.java')
 
 plugin_import = f'import {package_name}.AppBlockerPlugin;'
 if plugin_import not in main_text:
-    main_text = main_text.replace('import com.getcapacitor.BridgeActivity;',
-                                  'import com.getcapacitor.BridgeActivity;\n' + plugin_import)
+    anchor_import = 'import com.getcapacitor.BridgeActivity;'
+    if anchor_import not in main_text:
+        raise SystemExit('Could not safely add AppBlockerPlugin import to MainActivity.')
+    main_text = main_text.replace(anchor_import, anchor_import + '\n' + plugin_import, 1)
 if 'registerPlugin(AppBlockerPlugin.class);' not in main_text:
     anchor = 'super.onCreate(savedInstanceState);'
     if anchor not in main_text:
@@ -36,7 +38,7 @@ manifest = root / 'AndroidManifest.xml'
 xml = manifest.read_text()
 if '<queries>' not in xml:
     queries = '''\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n            <category android:name="android.intent.category.LAUNCHER" />\n        </intent>\n    </queries>\n'''
-    xml = re.sub(r'(<manifest\b[^>]*>)', r'\1' + queries, xml, count=1)
+    xml = re.sub(r'(<manifest\b[^>]*>)', lambda m: m.group(1) + queries, xml, count=1)
 
 service_name = package_name + '.AppBlockerAccessibilityService'
 if service_name not in xml:
@@ -52,12 +54,16 @@ shutil.copy2(Path('native/res/xml/app_blocker_accessibility_service_config.xml')
 values = root / 'res' / 'values'
 values.mkdir(parents=True, exist_ok=True)
 strings = values / 'strings.xml'
-if strings.exists():
-    content = strings.read_text()
-else:
-    content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
+content = strings.read_text() if strings.exists() else '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
 string = '<string name="app_blocker_accessibility_description">Allows Locked In to detect selected apps while blocking is enabled.</string>'
 if 'app_blocker_accessibility_description' not in content:
     content = content.replace('</resources>', '    ' + string + '\n</resources>')
 strings.write_text(content)
-print('App Blocker plugin, Accessibility Service, app visibility query, and service metadata installed.')
+
+logo_source = Path('www/icon-512.png')
+if not logo_source.exists():
+    raise SystemExit('Missing www/icon-512.png. App Blocker requires the real Locked In logo asset.')
+logo_dir = root / 'res' / 'drawable-nodpi'
+logo_dir.mkdir(parents=True, exist_ok=True)
+shutil.copy2(logo_source, logo_dir / 'locked_in_logo.png')
+print('App Blocker plugin, Accessibility Service, launcher-app visibility query, service metadata, and exact Locked In logo installed.')
