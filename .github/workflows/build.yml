@@ -399,8 +399,21 @@ jobs:
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug
 
 
+      - name: Verify APK before upload
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          sha256sum "$APK" | tee "$APK.sha256"
+          echo "APK exists and its internal ZIP structure is valid."
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: LockedIn-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/debug/app-debug.apk.sha256
+          if-no-files-found: error
+          compression-level: 0
