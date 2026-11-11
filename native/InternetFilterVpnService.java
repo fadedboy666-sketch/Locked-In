@@ -159,7 +159,7 @@ public class InternetFilterVpnService extends VpnService {
         int smallIcon = getResources().getIdentifier("ic_stat_locked_in", "drawable", getPackageName());
         if (smallIcon == 0) smallIcon = appIcon;
         builder.setContentTitle("Locked In")
-                .setContentText("Focus protection is active")
+                .setContentText("Internet Filter is active")
                 .setSmallIcon(smallIcon)
                 .setOngoing(true);
         if (appIcon != 0) {
