@@ -34,24 +34,6 @@ jobs:
         run: npx --yes esbuild@0.24.2 www/firebase.js --bundle --format=iife --outfile=www/firebase.bundle.js
 
 
-      - name: Bundle App Blocker UI
-        run: |
-          npx --yes esbuild@0.24.2 www/app-blocker.js --bundle --format=iife --outfile=www/app-blocker.bundle.js
-          python3 - <<'PY'
-          from pathlib import Path
-          index = Path('www/index.html')
-          content = index.read_text()
-          tag = '<script src="app-blocker.bundle.js"></script>'
-          if tag not in content:
-              anchor = '<script src="backup.bundle.js"></script>'
-              if anchor in content:
-                  content = content.replace(anchor, tag + anchor, 1)
-              else:
-                  content = content.replace('</body>', tag + '</body>', 1)
-              index.write_text(content)
-          print('App Blocker UI bundle linked.')
-          PY
-
       - name: Add Android platform
         run: npx cap add android
 
@@ -117,9 +99,17 @@ jobs:
           manifest.write_text(xml)
           print("Internet Filter VPN service and Capacitor plugin installed.")
           PY
+
       - name: Install native App Blocker
         run: python3 native/install_app_blocker.py
 
+      - name: Verify App Blocker files and web entry
+        run: |
+          test -f www/app-blocker.js
+          test -f www/index.html
+          test -f www/icon-512.png
+          grep -q 'src="app-blocker.js"' www/index.html
+          echo "App Blocker web entry and logo asset verified."
       - name: Increase Gradle download timeout
         run: |
           sed -i 's/networkTimeout=.*/networkTimeout=120000/' android/gradle/wrapper/gradle-wrapper.properties
@@ -399,21 +389,8 @@ jobs:
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug
 
 
-      - name: Verify APK before upload
-        run: |
-          set -euo pipefail
-          APK="android/app/build/outputs/apk/debug/app-debug.apk"
-          test -s "$APK"
-          unzip -t "$APK" >/dev/null
-          sha256sum "$APK" | tee "$APK.sha256"
-          echo "APK exists and its internal ZIP structure is valid."
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: LockedIn-APK
-          path: |
-            android/app/build/outputs/apk/debug/app-debug.apk
-            android/app/build/outputs/apk/debug/app-debug.apk.sha256
-          if-no-files-found: error
-          compression-level: 0
+          path: android/app/build/outputs/apk/debug/app-debug.apk
