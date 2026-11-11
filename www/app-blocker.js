@@ -44,7 +44,7 @@
       <div style="font-weight:800;margin:16px 0 8px;">Choose Apps</div>
       <input id="appBlockerSearch" class="modal-input" placeholder="Search installed apps…" autocomplete="off" style="margin-bottom:8px;">
       <div id="appBlockerNotice" class="muted" style="font-size:11px;line-height:1.45;margin:6px 0 8px;"></div>
-      <div id="appBlockerConfirmWrap" style="display:none;margin:8px 0 10px;"><button id="appBlockerConfirm" class="addbtn" style="margin:0;width:100%;" type="button">Confirm Selection</button></div>
+      <div id="appBlockerConfirmWrap" class="app-blocker-confirm-fixed" style="display:none;"><button id="appBlockerConfirm" class="addbtn" style="margin:0;width:100%;" type="button">Confirm Selection</button></div>
       <div id="appBlockerList"></div>
       <div style="height:24px;"></div>`;
 
@@ -105,6 +105,7 @@
     const filtered = apps.filter((app) => app.name.toLowerCase().includes(query) || app.packageName.toLowerCase().includes(query));
     const list = byId('appBlockerList');
     if (list) {
+      list.style.paddingBottom = "112px";
       if (loading && !apps.length) list.innerHTML = '<div class="muted" style="padding:20px;text-align:center;">Loading installed apps…</div>';
       else if (!filtered.length) list.innerHTML = `<div class="muted" style="padding:20px;text-align:center;">${apps.length ? 'No apps match your search.' : 'No launchable apps were found.'}</div>`;
       else list.innerHTML = filtered.map((app) => {
@@ -203,6 +204,8 @@
       sessionActive = !!result.sessionActive;
       accessibilityEnabled = !!result.accessibilityEnabled;
       notice = selected.size ? 'Selected apps saved.' : 'No apps selected.';
+      const search = byId('appBlockerSearch');
+      if (search) { search.value = ''; search.blur(); }
     } catch (error) {
       draft = new Set(selected);
       notice = error?.message || 'Could not save selected apps.';
