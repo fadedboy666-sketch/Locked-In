@@ -86,10 +86,7 @@ public class AppBlockerPlugin extends Plugin {
         return android.util.Base64.encodeToString(output.toByteArray(), android.util.Base64.NO_WRAP);
     }
 
-    @PluginMethod
-    public void getStatus(PluginCall call) {
-        call.resolve(statusObject());
-    }
+    @PluginMethod public void getStatus(PluginCall call) { call.resolve(statusObject()); }
 
     @PluginMethod
     public void setBlockedApps(PluginCall call) {
@@ -99,21 +96,15 @@ public class AppBlockerPlugin extends Plugin {
         JSONArray clean = new JSONArray();
         for (int i = 0; i < packages.length(); i++) {
             String value = packages.optString(i, "");
-            if (!TextUtils.isEmpty(value)
-                    && value.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+")
-                    && !value.equals(getContext().getPackageName())
-                    && !contains(clean, value)) {
-                clean.put(value);
-            }
+            if (!TextUtils.isEmpty(value) && value.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+")
+                    && !value.equals(getContext().getPackageName()) && !contains(clean, value)) clean.put(value);
         }
         if (prefs.getBoolean(KEY_SESSION, false) && clean.length() == 0) {
             call.reject("Keep at least one app selected during a Lock In session.");
             return;
         }
         SharedPreferences.Editor editor = prefs.edit().putString(KEY_BLOCKED, clean.toString());
-        if (clean.length() == 0 && !prefs.getBoolean(KEY_SESSION, false)) {
-            editor.putBoolean(KEY_MANUAL, false);
-        }
+        if (clean.length() == 0 && !prefs.getBoolean(KEY_SESSION, false)) editor.putBoolean(KEY_MANUAL, false);
         editor.apply();
         call.resolve(statusObject());
     }
@@ -128,10 +119,7 @@ public class AppBlockerPlugin extends Plugin {
         }
         if (enabled) {
             String problem = readinessProblem(prefs);
-            if (problem != null) {
-                call.reject(problem);
-                return;
-            }
+            if (problem != null) { call.reject(problem); return; }
         }
         prefs.edit().putBoolean(KEY_MANUAL, enabled).apply();
         call.resolve(statusObject());
@@ -143,10 +131,7 @@ public class AppBlockerPlugin extends Plugin {
         boolean active = call.getBoolean("active", false);
         if (active) {
             String problem = readinessProblem(prefs);
-            if (problem != null) {
-                call.reject(problem);
-                return;
-            }
+            if (problem != null) { call.reject(problem); return; }
         }
         prefs.edit().putBoolean(KEY_SESSION, active).apply();
         call.resolve(statusObject());
@@ -167,17 +152,14 @@ public class AppBlockerPlugin extends Plugin {
             Intent intent = new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS");
             intent.putExtra("android.provider.extra.ACCESSIBILITY_SERVICE_COMPONENT_NAME", component.flattenToString());
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                getContext().startActivity(intent);
-            } catch (Exception unsupportedDetailsPage) {
+            try { getContext().startActivity(intent); }
+            catch (Exception unsupportedDetailsPage) {
                 Intent fallback = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
                 fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 getContext().startActivity(fallback);
             }
             call.resolve();
-        } catch (Exception error) {
-            call.reject("Could not open Android Accessibility settings.", error);
-        }
+        } catch (Exception error) { call.reject("Could not open Android Accessibility settings.", error); }
     }
 
     private String readinessProblem(SharedPreferences prefs) {
@@ -185,10 +167,7 @@ public class AppBlockerPlugin extends Plugin {
         if (readBlocked(prefs).length() == 0) return "Select at least one app first.";
         return null;
     }
-
-    private SharedPreferences prefs() {
-        return getContext().getSharedPreferences(PREFS, 0);
-    }
+    private SharedPreferences prefs() { return getContext().getSharedPreferences(PREFS, 0); }
 
     private JSObject statusObject() {
         SharedPreferences prefs = prefs();
@@ -211,15 +190,12 @@ public class AppBlockerPlugin extends Plugin {
         try { return new JSONArray(prefs.getString(KEY_BLOCKED, "[]")); }
         catch (JSONException ignored) { return new JSONArray(); }
     }
-
     private boolean contains(JSONArray array, String value) {
         for (int i = 0; i < array.length(); i++) if (value.equals(array.optString(i))) return true;
         return false;
     }
-
     private boolean isServiceEnabled() {
-        String enabled = Settings.Secure.getString(
-                getContext().getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        String enabled = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
         if (TextUtils.isEmpty(enabled)) return false;
         ComponentName component = new ComponentName(getContext(), AppBlockerAccessibilityService.class);
         TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(':');

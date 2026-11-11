@@ -47,12 +47,20 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
 
     @Override public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null || event.getPackageName() == null) return;
+        // Overlay/window-content events are not reliable foreground changes. Only
+        // react to a real app-window transition to avoid the overlay hiding itself.
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
         String packageName = event.getPackageName().toString();
-        foregroundPackage = packageName;
         if (packageName.equals(getPackageName())) {
-            removeBlocker();
+            CharSequence className = event.getClassName();
+            String activity = className == null ? "" : className.toString();
+            if (activity.endsWith("MainActivity") || activity.endsWith("BridgeActivity")) {
+                foregroundPackage = packageName;
+                removeBlocker();
+            }
             return;
         }
+        foregroundPackage = packageName;
 
         SharedPreferences prefs = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
         boolean enabled = prefs.getBoolean(AppBlockerPlugin.KEY_MANUAL, false)
@@ -228,9 +236,15 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             SharedPreferences latest = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
             boolean enabled = latest.getBoolean(AppBlockerPlugin.KEY_MANUAL, false)
                     || latest.getBoolean(AppBlockerPlugin.KEY_SESSION, false);
-            if (enabled && packageName.equals(foregroundPackage) && isBlocked(latest, packageName)) {
-                showBlocker(packageName);
+            boolean stillBlocked = enabled && isBlocked(latest, packageName);
+            latest.edit().remove("scroll_until_" + packageName).apply();
+            if (stillBlocked && packageName.equals(foregroundPackage)) {
+                // Leave the distracting app when the five-minute pass expires.
+                // Android Home normally stops foreground feed playback; apps that
+                // support background audio may still continue independently.
+                performGlobalAction(GLOBAL_ACTION_HOME);
             }
+            removeBlocker();
         };
         handler.postDelayed(reblockRunnable, SCROLL_WINDOW_MS);
     }
@@ -429,7 +443,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 android.graphics.PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
         try {
