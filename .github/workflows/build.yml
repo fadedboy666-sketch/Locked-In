@@ -99,7 +99,6 @@ jobs:
           manifest.write_text(xml)
           print("Internet Filter VPN service and Capacitor plugin installed.")
           PY
-
       - name: Install native App Blocker
         run: python3 native/install_app_blocker.py
 
@@ -403,4 +402,3 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           compression-level: 0
           if-no-files-found: error
-
