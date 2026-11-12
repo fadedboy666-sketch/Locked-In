@@ -3,11 +3,14 @@ package PACKAGE_NAME;
 import android.accessibilityservice.AccessibilityService;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.media.AudioManager;
+import android.view.KeyEvent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -39,6 +42,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable reblockRunnable;
     private Runnable enableDoneRunnable;
+    private long challengeStartedAt = 0L;
+    private boolean challengeStarted = false;
 
     @Override public void onServiceConnected() {
         super.onServiceConnected();
@@ -49,7 +54,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         if (event == null || event.getPackageName() == null) return;
         // Overlay/window-content events are not reliable foreground changes. Only
         // react to a real app-window transition to avoid the overlay hiding itself.
-        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && event.getEventType() != AccessibilityEvent.TYPE_WINDOWS_CHANGED) return;
         String packageName = event.getPackageName().toString();
         if (packageName.equals(getPackageName())) {
             CharSequence className = event.getClassName();
@@ -69,7 +74,10 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             removeBlocker();
             return;
         }
-        if (!packageName.equals(currentBlockedPackage) || blockerView == null) showBlocker(packageName);
+        if (!packageName.equals(currentBlockedPackage) || blockerView == null) {
+            pauseForegroundMediaBestEffort();
+            showBlocker(packageName);
+        }
     }
 
     private boolean isBlocked(SharedPreferences prefs, String packageName) {
@@ -144,7 +152,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             scrollParams.topMargin = dp(10);
             TextView scroll = actionButton("SCROLL", Color.TRANSPARENT, WHITE, true);
             root.addView(scroll, scrollParams);
-            scroll.setOnClickListener(v -> showScrollConfirmation(packageName));
+            scroll.setOnClickListener(v -> showChallengeStart(packageName));
         } else {
             TextView limit = text("No more scroll passes for now. Get back to what matters.", 13, WHITE, false);
             limit.setGravity(Gravity.CENTER);
@@ -156,73 +164,96 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         attachOverlay(root);
     }
 
-    private void showScrollConfirmation(String packageName) {
+    private void showChallengeStart(String packageName) {
         if (!packageName.equals(currentBlockedPackage)) return;
         LinearLayout root = baseScreen();
-        root.addView(buildLogo(), new LinearLayout.LayoutParams(dp(76), dp(76)));
-        TextView title = text("SCROLL PASS", 22, WHITE, true);
+        TextView title = text("Do 15 push-ups to unlock scrolling.", 24, WHITE, true);
         title.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams titleParams = matchWrap();
-        titleParams.topMargin = dp(24);
-        root.addView(title, titleParams);
-        TextView detail = text("Take a short pause before unlocking five minutes of access.", 17, WHITE, false);
+        root.addView(title, matchWrap());
+        TextView detail = text("Choose a comfortable movement challenge, or take a 40-second pause instead.", 13, WHITE, false);
         detail.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams detailParams = matchWrap();
         detailParams.topMargin = dp(14);
-        detailParams.bottomMargin = dp(28);
+        detailParams.bottomMargin = dp(24);
         root.addView(detail, detailParams);
-        addActionButton(root, "CONFIRM", RED, WHITE, () -> startChallenge(packageName));
+        addActionButton(root, "START", RED, WHITE, () -> startChallenge(packageName, false));
+        TextView pause = actionButton("TAKE A 40-SECOND PAUSE INSTEAD", Color.TRANSPARENT, WHITE, true);
+        LinearLayout.LayoutParams pauseParams = matchWrap();
+        pauseParams.topMargin = dp(10);
+        root.addView(pause, pauseParams);
+        pause.setOnClickListener(v -> startChallenge(packageName, true));
+        TextView cancel = actionButton("BACK", Color.TRANSPARENT, WHITE, true);
         LinearLayout.LayoutParams cancelParams = matchWrap();
-        cancelParams.topMargin = dp(10);
-        TextView cancel = actionButton("CANCEL", Color.TRANSPARENT, WHITE, true);
+        cancelParams.topMargin = dp(8);
         root.addView(cancel, cancelParams);
         cancel.setOnClickListener(v -> showBlocker(packageName));
         replaceOverlay(root);
     }
 
-    private void startChallenge(String packageName) {
+    private void startChallenge(String packageName, boolean pauseAlternative) {
         SharedPreferences prefs = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
         int count = prefs.getInt("scroll_count_" + packageName, 0);
-        if (count >= MAX_SCROLL_PASSES) {
-            showBlocker(packageName);
-            return;
-        }
+        if (count >= MAX_SCROLL_PASSES) { showBlocker(packageName); return; }
         prefs.edit().putInt("scroll_count_" + packageName, count + 1).apply();
 
         LinearLayout root = baseScreen();
-        root.addView(buildLogo(), new LinearLayout.LayoutParams(dp(76), dp(76)));
-        TextView title = text("Take a short pause", 23, WHITE, true);
+        TextView title = text("You've got this.", 25, WHITE, true);
         title.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams titleParams = matchWrap();
-        titleParams.topMargin = dp(24);
-        root.addView(title, titleParams);
-        TextView detail = text("The DONE button becomes available after a short pause. Access then lasts five minutes.", 14, WHITE, false);
+        root.addView(title, matchWrap());
+        TextView detail = text(pauseAlternative
+                ? "Take a short pause. Your Done button will unlock shortly."
+                : "Finish your 15 push-ups and your Done button will unlock shortly.", 15, WHITE, false);
         detail.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams detailParams = matchWrap();
-        detailParams.topMargin = dp(12);
+        detailParams.topMargin = dp(14);
         detailParams.bottomMargin = dp(28);
         root.addView(detail, detailParams);
 
-        TextView done = actionButton("DONE", RED, WHITE, false);
-        done.setAlpha(0.32f);
-        done.setEnabled(false);
+        TextView done = actionButton("DONE", Color.TRANSPARENT, WHITE, true);
+        done.setAlpha(0.38f);
         root.addView(done, matchWrap());
-        done.setOnClickListener(v -> grantScrollPass(packageName));
-        TextView cancel = actionButton("CANCEL", Color.TRANSPARENT, WHITE, true);
+        done.setOnClickListener(v -> {
+            long elapsed = System.currentTimeMillis() - challengeStartedAt;
+            if (!challengeStarted || elapsed < CHALLENGE_DELAY_MS) {
+                showShortMessage(pauseAlternative
+                        ? "Finish your short pause first. Done unlocks after 40 seconds."
+                        : "Do your 15 push-ups first. Done unlocks after 40 seconds.");
+                return;
+            }
+            grantScrollPass(packageName);
+        });
+        TextView cancel = actionButton("BACK", Color.TRANSPARENT, WHITE, true);
         LinearLayout.LayoutParams cancelParams = matchWrap();
         cancelParams.topMargin = dp(10);
         root.addView(cancel, cancelParams);
         cancel.setOnClickListener(v -> showBlocker(packageName));
         replaceOverlay(root);
 
+        challengeStarted = true;
+        challengeStartedAt = System.currentTimeMillis();
         if (enableDoneRunnable != null) handler.removeCallbacks(enableDoneRunnable);
         enableDoneRunnable = () -> {
             if (!packageName.equals(currentBlockedPackage) || blockerView != root) return;
-            done.setEnabled(true);
             done.setAlpha(1f);
             done.setBackground(background(RED, RED, 14));
         };
         handler.postDelayed(enableDoneRunnable, CHALLENGE_DELAY_MS);
+    }
+
+    private void showShortMessage(String message) {
+        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void pauseForegroundMediaBestEffort() {
+        try {
+            AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
+            if (audio == null) return;
+            long now = SystemClock.uptimeMillis();
+            KeyEvent down = new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE, 0);
+            KeyEvent up = new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE, 0);
+            audio.dispatchMediaKeyEvent(down);
+            audio.dispatchMediaKeyEvent(up);
+        } catch (Exception ignored) { }
     }
 
     private void grantScrollPass(String packageName) {
@@ -474,6 +505,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private void removeBlocker() {
         removeOverlayOnly();
         currentBlockedPackage = "";
+        challengeStarted = false;
+        challengeStartedAt = 0L;
         if (enableDoneRunnable != null) {
             handler.removeCallbacks(enableDoneRunnable);
             enableDoneRunnable = null;
