@@ -102,7 +102,7 @@
     const screen = byId('appblocker');
     if (!screen) return;
     const query = (byId('appBlockerSearch')?.value || '').trim().toLowerCase();
-    const filtered = apps.filter((app) => app.name.toLowerCase().includes(query) || app.packageName.toLowerCase().includes(query));
+    const filtered = apps.filter((app) => app.name.toLowerCase().includes(query));
     const list = byId('appBlockerList');
     if (list) {
       list.style.paddingBottom = "112px";
@@ -111,7 +111,7 @@
       else list.innerHTML = filtered.map((app) => {
         const checked = draft.has(app.packageName);
         const icon = app.icon ? `<img alt="" src="data:image/png;base64,${app.icon}" style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex:none;">` : '<div style="width:38px;height:38px;border-radius:10px;background:var(--card2);flex:none;"></div>';
-        return `<div data-package="${escapeHtml(app.packageName)}" role="button" tabindex="0" style="display:flex;gap:10px;padding:10px 12px;align-items:center;border-bottom:1px solid var(--line);cursor:pointer;"><div style="display:flex;align-items:center;gap:11px;min-width:0;flex:1;">${icon}<div style="min-width:0;"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(app.name)}</div><div style="font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(app.packageName)}</div></div></div><span aria-hidden="true" style="width:22px;height:22px;border-radius:50%;border:2px solid ${checked ? 'var(--red)' : 'var(--line)'};background:${checked ? 'var(--red)' : 'transparent'};color:#fff;display:flex;align-items:center;justify-content:center;flex:none;font-size:14px;">${checked ? '✓' : ''}</span></div>`;
+        return `<div data-package="${escapeHtml(app.packageName)}" role="button" tabindex="0" style="display:flex;gap:10px;padding:10px 12px;align-items:center;border-bottom:1px solid var(--line);cursor:pointer;"><div style="display:flex;align-items:center;gap:11px;min-width:0;flex:1;">${icon}<div style="min-width:0;"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(app.name)}</div></div></div><span aria-hidden="true" style="width:22px;height:22px;border-radius:50%;border:2px solid ${checked ? 'var(--red)' : 'var(--line)'};background:${checked ? 'var(--red)' : 'transparent'};color:#fff;display:flex;align-items:center;justify-content:center;flex:none;font-size:14px;">${checked ? '✓' : ''}</span></div>`;
       }).join('');
     }
 
