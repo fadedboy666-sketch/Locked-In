@@ -154,7 +154,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             root.addView(scroll, scrollParams);
             scroll.setOnClickListener(v -> showChallengeStart(packageName));
         } else {
-            TextView limit = text("No more scroll passes for now. Get back to what matters.", 13, WHITE, false);
+            TextView limit = text("You can't scroll now. You have reached the limit.", 13, WHITE, false);
             limit.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams limitParams = matchWrap();
             limitParams.topMargin = dp(18);
@@ -170,18 +170,13 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         TextView title = text("Do 15 push-ups to unlock scrolling.", 24, WHITE, true);
         title.setGravity(Gravity.CENTER);
         root.addView(title, matchWrap());
-        TextView detail = text("Choose a comfortable movement challenge, or take a 40-second pause instead.", 13, WHITE, false);
+        TextView detail = text("Complete your 15 push-ups, then tap Done when it unlocks.", 13, WHITE, false);
         detail.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams detailParams = matchWrap();
         detailParams.topMargin = dp(14);
         detailParams.bottomMargin = dp(24);
         root.addView(detail, detailParams);
-        addActionButton(root, "START", RED, WHITE, () -> startChallenge(packageName, false));
-        TextView pause = actionButton("TAKE A 40-SECOND PAUSE INSTEAD", Color.TRANSPARENT, WHITE, true);
-        LinearLayout.LayoutParams pauseParams = matchWrap();
-        pauseParams.topMargin = dp(10);
-        root.addView(pause, pauseParams);
-        pause.setOnClickListener(v -> startChallenge(packageName, true));
+        addActionButton(root, "START", RED, WHITE, () -> startChallenge(packageName));
         TextView cancel = actionButton("BACK", Color.TRANSPARENT, WHITE, true);
         LinearLayout.LayoutParams cancelParams = matchWrap();
         cancelParams.topMargin = dp(8);
@@ -190,19 +185,15 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         replaceOverlay(root);
     }
 
-    private void startChallenge(String packageName, boolean pauseAlternative) {
+    private void startChallenge(String packageName) {
         SharedPreferences prefs = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
         int count = prefs.getInt("scroll_count_" + packageName, 0);
         if (count >= MAX_SCROLL_PASSES) { showBlocker(packageName); return; }
-        prefs.edit().putInt("scroll_count_" + packageName, count + 1).apply();
-
         LinearLayout root = baseScreen();
         TextView title = text("You've got this.", 25, WHITE, true);
         title.setGravity(Gravity.CENTER);
         root.addView(title, matchWrap());
-        TextView detail = text(pauseAlternative
-                ? "Take a short pause. Your Done button will unlock shortly."
-                : "Finish your 15 push-ups and your Done button will unlock shortly.", 15, WHITE, false);
+        TextView detail = text("Finish your 15 push-ups and your Done button will unlock shortly.", 15, WHITE, false);
         detail.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams detailParams = matchWrap();
         detailParams.topMargin = dp(14);
@@ -213,11 +204,9 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         done.setAlpha(0.38f);
         root.addView(done, matchWrap());
         done.setOnClickListener(v -> {
-            long elapsed = System.currentTimeMillis() - challengeStartedAt;
+            long elapsed = SystemClock.elapsedRealtime() - challengeStartedAt;
             if (!challengeStarted || elapsed < CHALLENGE_DELAY_MS) {
-                showShortMessage(pauseAlternative
-                        ? "Finish your short pause first. Done unlocks after 40 seconds."
-                        : "Do your 15 push-ups first. Done unlocks after 40 seconds.");
+                showShortMessage("Complete the push-up challenge first. Done unlocks after 40 seconds.");
                 return;
             }
             grantScrollPass(packageName);
@@ -230,7 +219,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         replaceOverlay(root);
 
         challengeStarted = true;
-        challengeStartedAt = System.currentTimeMillis();
+        challengeStartedAt = SystemClock.elapsedRealtime();
         if (enableDoneRunnable != null) handler.removeCallbacks(enableDoneRunnable);
         enableDoneRunnable = () -> {
             if (!packageName.equals(currentBlockedPackage) || blockerView != root) return;
@@ -260,7 +249,10 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         if (!packageName.equals(currentBlockedPackage)) return;
         SharedPreferences prefs = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
         long until = System.currentTimeMillis() + SCROLL_WINDOW_MS;
-        prefs.edit().putLong("scroll_until_" + packageName, until).apply();
+        int completedPasses = prefs.getInt("scroll_count_" + packageName, 0);
+        if (completedPasses >= MAX_SCROLL_PASSES) { showBlocker(packageName); return; }
+        prefs.edit().putInt("scroll_count_" + packageName, completedPasses + 1)
+                .putLong("scroll_until_" + packageName, until).apply();
         removeBlocker();
         if (reblockRunnable != null) handler.removeCallbacks(reblockRunnable);
         reblockRunnable = () -> {
