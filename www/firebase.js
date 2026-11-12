@@ -52,6 +52,36 @@ const savePromises = new Map();
 const authStateListeners = new Set();
 let authActionInProgress = false;
 
+// Firestore rejects an array that directly contains another array.
+// Encode only nested array elements as a tagged map, then restore them on read.
+const NESTED_ARRAY_TAG = '__lockedInFirestoreNestedArrayV1__';
+function encodeFirestoreValue(value) {
+  if (Array.isArray(value)) {
+    return value.map(item => Array.isArray(item)
+      ? { [NESTED_ARRAY_TAG]: encodeFirestoreValue(item) }
+      : encodeFirestoreValue(item));
+  }
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    const result = {};
+    for (const [key, child] of Object.entries(value)) result[key] = encodeFirestoreValue(child);
+    return result;
+  }
+  return value;
+}
+function decodeFirestoreValue(value) {
+  if (Array.isArray(value)) return value.map(decodeFirestoreValue);
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    const keys = Object.keys(value);
+    if (keys.length === 1 && keys[0] === NESTED_ARRAY_TAG && Array.isArray(value[NESTED_ARRAY_TAG])) {
+      return decodeFirestoreValue(value[NESTED_ARRAY_TAG]);
+    }
+    const result = {};
+    for (const [key, child] of Object.entries(value)) result[key] = decodeFirestoreValue(child);
+    return result;
+  }
+  return value;
+}
+
 function userDocument(uid) {
   return doc(db, 'users', uid, 'appData', 'main');
 }
@@ -152,7 +182,7 @@ async function syncUserData(_ignoredLocalData = {}) {
       throw new Error('Cloud backup data is invalid.');
     }
     // Do not enable writes until the caller has installed this data locally.
-    return { exists: true, data: cloudData };
+    return { exists: true, data: decodeFirestoreValue(cloudData) };
   }
   const emptyData = {};
   await setDoc(reference, { data: emptyData, createdAt: Date.now(), updatedAt: Date.now() });
@@ -162,7 +192,7 @@ async function syncUserData(_ignoredLocalData = {}) {
 function writeUserData(uid, data) {
   const previous = savePromises.get(uid) || Promise.resolve();
   const current = previous.catch(() => {}).then(() => setDoc(userDocument(uid), {
-    data,
+    data: encodeFirestoreValue(data),
     updatedAt: Date.now()
   }, { merge: true }));
   savePromises.set(uid, current);
@@ -178,8 +208,10 @@ async function flushUserData() {
   saveTimers.delete(uid);
   if (pendingSaveData.has(uid)) {
     const latest = pendingSaveData.get(uid);
-    pendingSaveData.delete(uid);
+    // Keep the pending copy until Firestore confirms the write. If it fails,
+    // local app storage remains the source of truth and this queue is retained.
     await writeUserData(uid, latest);
+    if (pendingSaveData.get(uid) === latest) pendingSaveData.delete(uid);
   }
   const pending = savePromises.get(uid);
   if (pending) await pending;
@@ -198,9 +230,12 @@ function saveUserData(data) {
       saveTimers.delete(uid);
       if (!pendingSaveData.has(uid)) return;
       const latest = pendingSaveData.get(uid);
-      pendingSaveData.delete(uid);
-      try { await writeUserData(uid, latest); }
-      catch (error) { console.error('Cloud save failed:', error); }
+      try {
+        await writeUserData(uid, latest);
+        if (pendingSaveData.get(uid) === latest) pendingSaveData.delete(uid);
+      } catch (error) {
+        console.error('Cloud save failed; pending data retained for retry:', error);
+      }
     }, 700);
     saveTimers.set(uid, timer);
   })().catch(error => console.error('Cloud save scheduling failed:', error));
@@ -208,15 +243,25 @@ function saveUserData(data) {
 
 async function signOut() {
   const auth = await getFirebaseAuth();
-  await flushUserData();
+  let cloudSaveFailed = false;
+  try {
+    await flushUserData();
+  } catch (error) {
+    // Do not trap the user in their account because a cloud write failed.
+    // The app's local master/guest backup remains untouched.
+    cloudSaveFailed = true;
+    console.error('Cloud save failed during sign-out; continuing with sign-out:', error);
+  }
+
   const uid = auth.currentUser?.uid;
   if (uid) cloudReadyUsers.delete(uid);
+
   if (Capacitor.isNativePlatform()) {
     try { await FirebaseAuthentication.signOut(); }
-    finally { if (auth.currentUser) await firebaseSignOut(auth); }
-  } else if (auth.currentUser) {
-    await firebaseSignOut(auth);
+    catch (error) { console.warn('Native Google sign-out did not complete cleanly:', error); }
   }
+  if (auth.currentUser) await firebaseSignOut(auth);
+  return { cloudSaveFailed };
 }
 
 async function watchAuthState(callback) {
