@@ -6,6 +6,7 @@ const ROUTINE_MIN_ID = 100000000;
 const ROUTINE_MAX_ID = 999999999;
 const SESSION_ID = 1900000001;
 const DAILY_TASK_ID = 1900000002;
+const LOCK_IN_REMINDER_BASE_ID = 1900000010;
 const BRAND_LARGE_ICON = 'ic_large_locked_in';
 const BRAND_SMALL_ICON = 'ic_stat_locked_in';
 const BRAND_ICON_COLOR = '#292929';
@@ -102,7 +103,8 @@ async function cancelManagedNotifications() {
     .filter(id =>
       (id >= ROUTINE_MIN_ID && id <= ROUTINE_MAX_ID) ||
       id === SESSION_ID ||
-      id === DAILY_TASK_ID
+      id === DAILY_TASK_ID ||
+      (id >= LOCK_IN_REMINDER_BASE_ID && id < LOCK_IN_REMINDER_BASE_ID + 60)
     );
   await cancelIds(ids);
 }
@@ -224,7 +226,7 @@ async function syncSession(sessionStartTimestamp) {
     notifications: [{
       id: SESSION_ID,
       title: 'Your 12-hour session limit has been reached',
-      body: 'Open Locked In to end your session and take a break.',
+      body: 'Your 12-hour Lock In session has ended. Open Locked In to review your progress.',
       smallIcon: BRAND_SMALL_ICON,
           iconColor: BRAND_ICON_COLOR,
           largeIcon: BRAND_LARGE_ICON,
@@ -258,22 +260,62 @@ async function syncDailyTaskReminder(tasks) {
   });
 }
 
-async function syncAllNow({ routine, routineLog, sessionStartTimestamp, dailyTasks } = {}) {
+
+function buildLockInReminderNotifications(settings = {}) {
+  const notifications = [];
+  const periods = [
+    { key: 'morning', label: 'Morning', offset: 0 },
+    { key: 'afternoon', label: 'Afternoon', offset: 20 },
+    { key: 'evening', label: 'Evening', offset: 40 }
+  ];
+  for (const period of periods) {
+    const config = settings?.[period.key];
+    if (!config?.enabled || !validTime(config.time)) continue;
+    const [hour, minute] = config.time.split(':').map(Number);
+    for (let offset = 0; offset < WINDOW_DAYS; offset++) {
+      const fireAt = localDateAtOffset(offset, hour, minute);
+      if (fireAt.getTime() <= Date.now() + 1000) continue;
+      notifications.push({
+        id: LOCK_IN_REMINDER_BASE_ID + period.offset + offset,
+        title: "It's time to Lock In",
+        body: `Your ${period.label.toLowerCase()} focus window is here. Start a focus session when you're ready.`,
+        smallIcon: BRAND_SMALL_ICON,
+        iconColor: BRAND_ICON_COLOR,
+        largeIcon: BRAND_LARGE_ICON,
+        schedule: { at: fireAt, allowWhileIdle: ALLOW_IDLE_OTHER }
+      });
+    }
+  }
+  return notifications;
+}
+
+async function syncLockInReminders(settings) {
+  const notifications = buildLockInReminderNotifications(settings || {});
+  await scheduleInChunks(notifications);
+  console.info('[LockedIn] Lock In reminders scheduled:', notifications.length);
+}
+
+async function syncAllNow({ routine, routineLog, sessionStartTimestamp, dailyTasks, lockInReminders } = {}) {
   try {
-    const granted = await requestPermission();
-    if (!granted) return false;
+    const permission = await LocalNotifications.checkPermissions();
+    if (permission.display !== 'granted') {
+      console.info('[LockedIn] Notification permission is not granted yet; skipping scheduling without prompting.');
+      return false;
+    }
 
     await cancelManagedNotifications();
     await Promise.all([
       syncRoutine(routine || {}, routineLog || {}),
       syncSession(sessionStartTimestamp),
-      syncDailyTaskReminder(dailyTasks)
+      syncDailyTaskReminder(dailyTasks),
+      syncLockInReminders(lockInReminders)
     ]);
 
     const pending = await LocalNotifications.getPending();
     const managedCount = (pending.notifications || []).filter(n =>
       (n.id >= ROUTINE_MIN_ID && n.id <= ROUTINE_MAX_ID) ||
-      n.id === SESSION_ID || n.id === DAILY_TASK_ID
+      n.id === SESSION_ID || n.id === DAILY_TASK_ID ||
+      (n.id >= LOCK_IN_REMINDER_BASE_ID && n.id < LOCK_IN_REMINDER_BASE_ID + 60)
     ).length;
     console.info('[LockedIn] Notification sync complete. Pending managed notifications:', managedCount);
     return true;
@@ -288,5 +330,13 @@ function syncAll(options) {
   syncQueue = syncQueue.then(run, run);
   return syncQueue;
 }
+
+LocalNotifications.addListener('localNotificationActionPerformed', event => {
+  const id = Number(event?.notification?.id);
+  if (id >= LOCK_IN_REMINDER_BASE_ID && id < LOCK_IN_REMINDER_BASE_ID + 60) {
+    // Open the Focus screen, but never start a session without the user's tap.
+    window.showScreen?.('focus');
+  }
+});
 
 window.LockedInNotifications = { requestPermission, syncAll };

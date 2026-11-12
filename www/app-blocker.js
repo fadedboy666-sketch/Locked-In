@@ -257,7 +257,7 @@
     const p = plugin();
     if (!p || typeof p.setBlockerConfig !== 'function') return;
     const goals = Array.isArray(state?.yearlyGoals) ? state.yearlyGoals : [];
-    const goal = goals.find((item) => typeof item === 'string' && item.trim()) || '';
+    const goal = goals.find((item) => typeof item === 'string' && item.trim() && item.trim() !== 'Build financial freedom & peak physique') || '';
     try { await p.setBlockerConfig({ yearlyGoal: goal }); }
     catch (error) { console.warn('Could not sync yearly goal to App Blocker:', error); }
   }
