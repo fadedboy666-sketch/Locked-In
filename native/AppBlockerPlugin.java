@@ -230,7 +230,12 @@ public class AppBlockerPlugin extends Plugin {
     public void requestHabitWidget(PluginCall call) {
         String name = call.getString("habitName", "");
         if (TextUtils.isEmpty(name)) { call.reject("Choose a habit first."); return; }
-        getContext().getSharedPreferences("lockedin_home_widgets", 0).edit().putString("selected_habit_name", name).apply();
+        SharedPreferences prefs = getContext().getSharedPreferences("lockedin_home_widgets", 0);
+        try {
+            JSONArray queue = new JSONArray(prefs.getString("pending_habit_widget_names", "[]"));
+            queue.put(name);
+            prefs.edit().putString("selected_habit_name", name).putString("pending_habit_widget_names", queue.toString()).apply();
+        } catch (JSONException error) { call.reject("Could not queue the selected habit widget.", error); return; }
         requestHomeWidget(call, "habit");
     }
 
