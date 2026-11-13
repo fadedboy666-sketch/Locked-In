@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/habit_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/widget_card_bg" android:padding="12dp">
- <TextView android:id="@+id/habit_widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Workout" android:textColor="#FFFFFF" android:textSize="15sp" android:textStyle="bold" android:maxLines="1"/>
- <TextView android:id="@+id/habit_widget_subtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#A7A8AD" android:textSize="10sp" android:maxLines="1" android:layout_marginTop="2dp"/>
- <GridLayout android:id="@+id/habit_widget_grid" android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="6" android:rowCount="5" android:useDefaultMargins="true" android:layout_marginTop="9dp"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/habit_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/widget_habit_card_bg" android:padding="14dp">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+  <TextView android:id="@+id/habit_widget_icon" android:layout_width="34dp" android:layout_height="34dp" android:gravity="center" android:background="@drawable/widget_habit_icon_bg" android:text="🎯" android:textSize="17sp"/>
+  <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="9dp">
+   <TextView android:id="@+id/habit_widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Workout" android:textColor="#FFFFFF" android:textSize="15sp" android:textStyle="bold" android:maxLines="1"/>
+   <TextView android:id="@+id/habit_widget_subtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#A7A8AD" android:textSize="10sp" android:maxLines="1" android:layout_marginTop="2dp"/>
+  </LinearLayout>
+ </LinearLayout>
+ <GridLayout android:id="@+id/habit_widget_grid" android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="10" android:rowCount="3" android:useDefaultMargins="false" android:layout_marginTop="10dp"/>
 </LinearLayout>
