@@ -28,7 +28,7 @@ public class HabitWidgetProvider extends AppWidgetProvider {
  @Override public void onDeleted(Context context,int[] ids){
   super.onDeleted(context,ids);
   SharedPreferences.Editor edit=context.getSharedPreferences("lockedin_home_widgets",0).edit();
-  for(int id:ids)edit.remove("habit_widget_id_"+id);
+  for(int id:ids){edit.remove("habit_widget_id_"+id);edit.remove("habit_widget_name_"+id);}
   edit.apply();
  }
  public static void updateOne(Context context,AppWidgetManager manager,int id){
