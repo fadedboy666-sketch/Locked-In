@@ -15,7 +15,7 @@ package_name = match.group(1)
 package_dir = java_root.joinpath(*package_name.split('.'))
 package_dir.mkdir(parents=True, exist_ok=True)
 
-for filename in ('AppBlockerPlugin.java', 'AppBlockerAccessibilityService.java'):
+for filename in ('AppBlockerPlugin.java', 'AppBlockerAccessibilityService.java', 'StreakWidgetProvider.java', 'HabitWidgetProvider.java'):
     source = Path('native') / filename
     if not source.exists():
         raise SystemExit(f'Missing native source: {source}')
@@ -44,6 +44,29 @@ service_name = package_name + '.AppBlockerAccessibilityService'
 if service_name not in xml:
     service = f'''\n        <service\n            android:name="{service_name}"\n            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"\n            android:exported="true">\n            <intent-filter>\n                <action android:name="android.accessibilityservice.AccessibilityService" />\n            </intent-filter>\n            <meta-data\n                android:name="android.accessibilityservice"\n                android:resource="@xml/app_blocker_accessibility_service_config" />\n        </service>\n'''
     xml = xml.replace('</application>', service + '    </application>', 1)
+
+# Install App Widget provider metadata and layouts/drawables.
+for filename in ('widget_info_streak.xml', 'widget_info_habit.xml'):
+    shutil.copy2(Path('native/res/xml') / filename, xml_dir / filename)
+for folder in ('layout', 'drawable'):
+    source_dir = Path('native/res') / folder
+    target_dir = root / 'res' / folder
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for source in source_dir.glob('*.xml'):
+        shutil.copy2(source, target_dir / source.name)
+
+
+for provider, metadata in (
+    (package_name + '.StreakWidgetProvider', '@xml/widget_info_streak'),
+    (package_name + '.HabitWidgetProvider', '@xml/widget_info_habit')
+):
+    if provider not in xml:
+        receiver = f'''        <receiver android:name="{provider}" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="{metadata}" />
+        </receiver>
+'''
+        xml = xml.replace('</application>', receiver + '    </application>', 1)
 manifest.write_text(xml)
 
 xml_dir = root / 'res' / 'xml'
