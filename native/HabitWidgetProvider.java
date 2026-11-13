@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.text.TextUtils;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -15,43 +16,58 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 public class HabitWidgetProvider extends AppWidgetProvider {
  public static final String ACTION_DAY_TAP="PACKAGE_NAME.HABIT_WIDGET_DAY_TAP";
- @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids){
+ @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){
   SharedPreferences prefs=context.getSharedPreferences("lockedin_home_widgets",0);
   for(int id:ids){
-   String mapKey="habit_widget_name_"+id;
-   if(!prefs.contains(mapKey)){
+   String key="habit_widget_id_"+id;
+   if(!prefs.contains(key)){
+    String mapped="";
     try{
      JSONArray queue=new JSONArray(prefs.getString("pending_habit_widget_ids","[]"));
-     if(queue.length()>0){String habitId=queue.optString(0,"");JSONArray rest=new JSONArray();for(int q=1;q<queue.length();q++)rest.put(queue.opt(q));prefs.edit().putString("habit_widget_id_"+id,habitId).putString("pending_habit_widget_ids",rest.toString()).apply();}
-     else prefs.edit().putString("habit_widget_id_"+id,"").apply();
-    }catch(Exception ignored){prefs.edit().putString(mapKey,prefs.getString("selected_habit_name","")).apply();}
+     if(queue.length()>0){
+      mapped=queue.optString(0,"");JSONArray rest=new JSONArray();
+      for(int q=1;q<queue.length();q++)rest.put(queue.opt(q));
+      prefs.edit().putString(key,mapped).putString("pending_habit_widget_ids",rest.toString()).apply();
+     }else prefs.edit().putString(key,"").apply();
+    }catch(Exception ignored){prefs.edit().putString(key,"").apply();}
    }
    updateOne(context,manager,id);
   }
  }
- @Override public void onDeleted(Context context,int[] ids){super.onDeleted(context,ids);SharedPreferences.Editor e=context.getSharedPreferences("lockedin_home_widgets",0).edit();for(int id:ids)e.remove("habit_widget_id_"+id);e.apply();}
+ @Override public void onDeleted(Context context,int[] ids){
+  super.onDeleted(context,ids);
+  SharedPreferences.Editor edit=context.getSharedPreferences("lockedin_home_widgets",0).edit();
+  for(int id:ids)edit.remove("habit_widget_id_"+id);
+  edit.apply();
+ }
  public static void updateOne(Context context,AppWidgetManager manager,int id){
   SharedPreferences prefs=context.getSharedPreferences("lockedin_home_widgets",0);
-  String chosen=prefs.getString("habit_widget_name_"+id,prefs.getString("selected_habit_name",""));
+  String chosenId=prefs.getString("habit_widget_id_"+id,"");
   RemoteViews v=new RemoteViews(context.getPackageName(),R.layout.widget_habit);
   try{
-   JSONArray all=new JSONArray(prefs.getString("habits","[]")); JSONObject habit=null;
-   for(int i=0;i<all.length();i++){JSONObject item=all.optJSONObject(i);if(item!=null&&chosen.equals(item.optString("name"))){habit=item;break;}}
-   if(habit==null){v.setTextViewText(R.id.habit_widget_title,"Habit unavailable");v.setTextViewText(R.id.habit_widget_subtitle,"Choose a habit again in Locked In Settings");}
-   else{
+   JSONArray all=new JSONArray(prefs.getString("habits","[]"));JSONObject habit=null;
+   for(int i=0;i<all.length();i++){
+    JSONObject item=all.optJSONObject(i);
+    if(item!=null&&chosenId.equals(item.optString("id",""))){habit=item;break;}
+   }
+   if(habit==null){
+    v.setTextViewText(R.id.habit_widget_title,"Habit unavailable");
+    v.setTextViewText(R.id.habit_widget_subtitle,"This habit is no longer in your tracker");
+   }else{
     v.setTextViewText(R.id.habit_widget_title,habit.optString("name","Habit"));
     v.setTextViewText(R.id.habit_widget_icon,habit.optString("icon","🎯"));
-    String metric=habit.optString("metric","");v.setTextViewText(R.id.habit_widget_subtitle,metric);
-    JSONArray days=habit.optJSONArray("days");v.removeAllViews(R.id.habit_widget_grid);
+    v.setTextViewText(R.id.habit_widget_subtitle,habit.optString("metric",""));
+    JSONArray days=habit.optJSONArray("days");
+    v.removeAllViews(R.id.habit_widget_grid);
     String first=habit.optString("firstUseDate","");
     String created=habit.optString("createdOn",first);
     String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
     SimpleDateFormat parser=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
     Calendar dayCalendar=Calendar.getInstance();
-    try { if(!first.isEmpty()) dayCalendar.setTime(parser.parse(first)); } catch(Exception ignored) {}
+    try{if(!first.isEmpty())dayCalendar.setTime(parser.parse(first));}catch(Exception ignored){}
     for(int d=0;d<30;d++){
      String dateKey=parser.format(dayCalendar.getTime());
-     boolean active=!first.isEmpty() && dateKey.compareTo(created)>=0 && dateKey.compareTo(today)<=0;
+     boolean active=!first.isEmpty()&&dateKey.compareTo(created)>=0&&dateKey.compareTo(today)<=0;
      String status=days==null?"missed":days.optString(d,"missed");
      RemoteViews cell=new RemoteViews(context.getPackageName(),R.layout.widget_habit_cell);
      cell.setTextViewText(R.id.habit_day_number,String.valueOf(d+1));
@@ -59,16 +75,15 @@ public class HabitWidgetProvider extends AppWidgetProvider {
      cell.setInt(R.id.habit_day_number,"setBackgroundResource",bg);
      cell.setTextColor(R.id.habit_day_number,active?Color.WHITE:0x55777777);
      if(active){
-      Intent tap=new Intent(context,HabitWidgetProvider.class);tap.setAction(ACTION_DAY_TAP);tap.putExtra("habit_id",chosenId);tap.putExtra("day_index",d);tap.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id);
+      Intent tap=new Intent(context,HabitWidgetProvider.class);
+      tap.setAction(ACTION_DAY_TAP);tap.putExtra("habit_id",chosenId);tap.putExtra("day_index",d);tap.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id);
       PendingIntent pi=PendingIntent.getBroadcast(context,5000+id*40+d,tap,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
       cell.setOnClickPendingIntent(R.id.habit_day_number,pi);
      }
-     v.addView(R.id.habit_widget_grid,cell);
-     dayCalendar.add(Calendar.DAY_OF_YEAR,1);
+     v.addView(R.id.habit_widget_grid,cell);dayCalendar.add(Calendar.DAY_OF_YEAR,1);
     }
-    
    }
-  }catch(Exception ignored){v.setTextViewText(R.id.habit_widget_title,"30-day tracker");}
+  }catch(Exception ignored){v.setTextViewText(R.id.habit_widget_title,"Habit tracker");}
   Intent launch=context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
   if(launch!=null){launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);PendingIntent open=PendingIntent.getActivity(context,4200+id,launch,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);v.setOnClickPendingIntent(R.id.habit_widget_root,open);}
   manager.updateAppWidget(id,v);
@@ -76,11 +91,12 @@ public class HabitWidgetProvider extends AppWidgetProvider {
  @Override public void onReceive(Context context,Intent intent){
   super.onReceive(context,intent);
   if(intent==null||!ACTION_DAY_TAP.equals(intent.getAction()))return;
-  String name=intent.getStringExtra("habit_name");int day=intent.getIntExtra("day_index",-1);
-  if(name==null||day<0||day>=30)return;
+  String habitId=intent.getStringExtra("habit_id");int day=intent.getIntExtra("day_index",-1);
+  if(TextUtils.isEmpty(habitId)||day<0||day>=30)return;
   SharedPreferences prefs=context.getSharedPreferences("lockedin_home_widgets",0);
   try{
-   JSONArray pending=new JSONArray(prefs.getString("pending_changes","[]"));JSONObject change=new JSONObject();change.put("habitId",habitId);change.put("dayIndex",day);pending.put(change);
+   JSONArray pending=new JSONArray(prefs.getString("pending_changes","[]"));
+   JSONObject change=new JSONObject();change.put("habitId",habitId);change.put("dayIndex",day);pending.put(change);
    prefs.edit().putString("pending_changes",pending.toString()).apply();
   }catch(Exception ignored){}
   Intent launch=context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
