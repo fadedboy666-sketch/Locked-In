@@ -233,8 +233,21 @@ public class AppBlockerPlugin extends Plugin {
                 for (int widgetId : manager.getAppWidgetIds(provider)) {
                     String key = "habit_widget_id_" + widgetId;
                     String mapped = prefs.getString(key, null);
-                    if (mapped != null && !TextUtils.isEmpty(mapped) && !availableIds.contains(mapped)) {
-                        cleanup.putString(key, "");
+                    if (mapped == null) {
+                        String oldName = prefs.getString("habit_widget_name_" + widgetId, null);
+                        if (!TextUtils.isEmpty(oldName)) {
+                            for (int i = 0; i < habitData.length(); i++) {
+                                JSONObject item = habitData.optJSONObject(i);
+                                if (item != null && oldName.equals(item.optString("name", ""))) {
+                                    mapped = item.optString("id", "");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (mapped == null || (!TextUtils.isEmpty(mapped) && !availableIds.contains(mapped))) mapped = "";
+                    if (!prefs.contains(key) || !mapped.equals(prefs.getString(key, null))) {
+                        cleanup.putString(key, mapped);
                         changed = true;
                     }
                 }
