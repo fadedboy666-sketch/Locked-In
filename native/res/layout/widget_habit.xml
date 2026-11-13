@@ -3,7 +3,7 @@
  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
   <TextView android:id="@+id/habit_widget_icon" android:layout_width="34dp" android:layout_height="34dp" android:gravity="center" android:background="@drawable/widget_habit_icon_bg" android:text="🎯" android:textSize="17sp"/>
   <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="9dp">
-   <TextView android:id="@+id/habit_widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Workout" android:textColor="#FFFFFF" android:textSize="15sp" android:textStyle="bold" android:maxLines="1"/>
+   <TextView android:id="@+id/habit_widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Habit name" android:textColor="#FFFFFF" android:textSize="15sp" android:textStyle="bold" android:maxLines="1"/>
    <TextView android:id="@+id/habit_widget_subtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#A7A8AD" android:textSize="10sp" android:maxLines="1" android:layout_marginTop="2dp"/>
   </LinearLayout>
  </LinearLayout>
