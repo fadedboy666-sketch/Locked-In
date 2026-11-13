@@ -18,6 +18,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
@@ -215,9 +216,31 @@ public class AppBlockerPlugin extends Plugin {
             edit.putInt("streak", Math.max(0, data.optInt("streak", 0)));
             edit.putLong("streak_start_ms", data.optLong("streakStartMs", 0));
             edit.putBoolean("streak_lapsed", data.optBoolean("lapsed", false));
-            edit.putString("habits", data.optJSONArray("habits") == null ? "[]" : data.optJSONArray("habits").toString());
+            JSONArray habitData = data.optJSONArray("habits");
+            edit.putString("habits", habitData == null ? "[]" : habitData.toString());
             edit.putString("selected_habit_name", data.optString("selectedHabitName", ""));
             edit.apply();
+            if (habitData != null) {
+                Set<String> availableNames = new HashSet<>();
+                for (int i = 0; i < habitData.length(); i++) {
+                    JSONObject item = habitData.optJSONObject(i);
+                    if (item != null) availableNames.add(item.optString("name", ""));
+                }
+                android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(getContext());
+                android.content.ComponentName provider = new android.content.ComponentName(getContext(), HabitWidgetProvider.class);
+                SharedPreferences prefs = getContext().getSharedPreferences("lockedin_home_widgets", 0);
+                SharedPreferences.Editor cleanup = prefs.edit();
+                boolean changed = false;
+                for (int widgetId : manager.getAppWidgetIds(provider)) {
+                    String key = "habit_widget_name_" + widgetId;
+                    String mapped = prefs.getString(key, null);
+                    if (mapped != null && !TextUtils.isEmpty(mapped) && !availableNames.contains(mapped)) {
+                        cleanup.putString(key, "");
+                        changed = true;
+                    }
+                }
+                if (changed) cleanup.apply();
+            }
             updateHomeWidgets();
             call.resolve();
         } catch (Exception error) { call.reject("Could not sync home-screen widgets.", error); }
