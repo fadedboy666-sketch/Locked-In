@@ -37,24 +37,28 @@ main_activity.write_text(main_text)
 manifest = root / 'AndroidManifest.xml'
 xml = manifest.read_text()
 if '<queries>' not in xml:
-    queries = '''\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n            <category android:name="android.intent.category.LAUNCHER" />\n        </intent>\n    </queries>\n'''
+    queries = '''\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+'''
     xml = re.sub(r'(<manifest\b[^>]*>)', lambda m: m.group(1) + queries, xml, count=1)
 
 service_name = package_name + '.AppBlockerAccessibilityService'
 if service_name not in xml:
-    service = f'''\n        <service\n            android:name="{service_name}"\n            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"\n            android:exported="true">\n            <intent-filter>\n                <action android:name="android.accessibilityservice.AccessibilityService" />\n            </intent-filter>\n            <meta-data\n                android:name="android.accessibilityservice"\n                android:resource="@xml/app_blocker_accessibility_service_config" />\n        </service>\n'''
+    service = f'''\n        <service
+            android:name="{service_name}"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/app_blocker_accessibility_service_config" />
+        </service>
+'''
     xml = xml.replace('</application>', service + '    </application>', 1)
-
-# Install App Widget provider metadata and layouts/drawables.
-for filename in ('widget_info_streak.xml', 'widget_info_habit.xml'):
-    shutil.copy2(Path('native/res/xml') / filename, xml_dir / filename)
-for folder in ('layout', 'drawable'):
-    source_dir = Path('native/res') / folder
-    target_dir = root / 'res' / folder
-    target_dir.mkdir(parents=True, exist_ok=True)
-    for source in source_dir.glob('*.xml'):
-        shutil.copy2(source, target_dir / source.name)
-
 
 for provider, metadata in (
     (package_name + '.StreakWidgetProvider', '@xml/widget_info_streak'),
@@ -73,6 +77,15 @@ xml_dir = root / 'res' / 'xml'
 xml_dir.mkdir(parents=True, exist_ok=True)
 shutil.copy2(Path('native/res/xml/app_blocker_accessibility_service_config.xml'),
              xml_dir / 'app_blocker_accessibility_service_config.xml')
+for filename in ('widget_info_streak.xml', 'widget_info_habit.xml'):
+    shutil.copy2(Path('native/res/xml') / filename, xml_dir / filename)
+
+for folder in ('layout', 'drawable'):
+    source_dir = Path('native/res') / folder
+    target_dir = root / 'res' / folder
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for source in source_dir.glob('*.xml'):
+        shutil.copy2(source, target_dir / source.name)
 
 values = root / 'res' / 'values'
 values.mkdir(parents=True, exist_ok=True)
@@ -89,4 +102,4 @@ if not logo_source.exists():
 logo_dir = root / 'res' / 'drawable-nodpi'
 logo_dir.mkdir(parents=True, exist_ok=True)
 shutil.copy2(logo_source, logo_dir / 'locked_in_logo.png')
-print('App Blocker plugin, Accessibility Service, launcher-app visibility query, service metadata, and exact Locked In logo installed.')
+print('App Blocker and both Locked In home-screen widgets installed.')
