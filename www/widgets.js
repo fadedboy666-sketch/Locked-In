@@ -2,7 +2,8 @@
   'use strict';
   const plugin = () => window.Capacitor?.Plugins?.AppBlocker;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  function habits() { return Array.isArray(window.state?.trackerHabits) ? window.state.trackerHabits : []; }
+  function appState() { return typeof state !== 'undefined' ? state : null; }
+  function habits() { const s=appState(); return Array.isArray(s?.trackerHabits) ? s.trackerHabits : []; }
   function render() {
     const host = document.getElementById('homeWidgetSettings');
     if (!host) return;
@@ -39,11 +40,11 @@
     try {
       const selected=localStorage.getItem('lockedin_widget_habit_name_v1')||'';
       const safeHabits=habits().map(h=>({name:String(h.name||''),icon:String(h.icon||''),metric:String(h.metric||''),days:Array.isArray(h.days)?h.days.slice(0,30):[],createdOn:String(h.createdOn||''),firstUseDate:String(window.state.firstUseDate||'')}));
-      await p.syncHomeWidgets({streak:Number(window.state.streak)||0,habits:safeHabits,selectedHabitName:selected});
+      await p.syncHomeWidgets({streak:Number(s.streak)||0,streakStartMs:s.streakStart instanceof Date?s.streakStart.getTime():0,lapsed:!!s.lapsed,habits:safeHabits,selectedHabitName:selected});
     } catch(e) { console.warn('Home widget sync failed:',e); }
   }
   async function applyPending() {
-    const p=plugin(); if(!p?.getPendingWidgetChanges || !window.state || typeof window.cycleTrackerDayCell!=='function') return;
+    const p=plugin(); if(!p?.getPendingWidgetChanges || !appState() || typeof window.cycleTrackerDayCell!=='function') return;
     try {
       const result=await p.getPendingWidgetChanges();
       const changes=Array.isArray(result?.changes)?result.changes:[];
