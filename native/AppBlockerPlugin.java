@@ -214,17 +214,16 @@ public class AppBlockerPlugin extends Plugin {
             JSObject data = call.getData();
             SharedPreferences.Editor edit = getContext().getSharedPreferences("lockedin_home_widgets", 0).edit();
             edit.putInt("streak", Math.max(0, data.optInt("streak", 0)));
-            edit.putLong("streak_start_ms", data.optLong("streakStartMs", 0));
             edit.putBoolean("streak_lapsed", data.optBoolean("lapsed", false));
             JSONArray habitData = data.optJSONArray("habits");
             edit.putString("habits", habitData == null ? "[]" : habitData.toString());
             edit.putString("selected_habit_name", data.optString("selectedHabitName", ""));
             edit.apply();
             if (habitData != null) {
-                Set<String> availableNames = new HashSet<>();
+                Set<String> availableIds = new HashSet<>();
                 for (int i = 0; i < habitData.length(); i++) {
                     JSONObject item = habitData.optJSONObject(i);
-                    if (item != null) availableNames.add(item.optString("name", ""));
+                    if (item != null) availableIds.add(item.optString("id", ""));
                 }
                 android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(getContext());
                 android.content.ComponentName provider = new android.content.ComponentName(getContext(), HabitWidgetProvider.class);
@@ -232,9 +231,9 @@ public class AppBlockerPlugin extends Plugin {
                 SharedPreferences.Editor cleanup = prefs.edit();
                 boolean changed = false;
                 for (int widgetId : manager.getAppWidgetIds(provider)) {
-                    String key = "habit_widget_name_" + widgetId;
+                    String key = "habit_widget_id_" + widgetId;
                     String mapped = prefs.getString(key, null);
-                    if (mapped != null && !TextUtils.isEmpty(mapped) && !availableNames.contains(mapped)) {
+                    if (mapped != null && !TextUtils.isEmpty(mapped) && !availableIds.contains(mapped)) {
                         cleanup.putString(key, "");
                         changed = true;
                     }
@@ -251,13 +250,13 @@ public class AppBlockerPlugin extends Plugin {
 
     @PluginMethod
     public void requestHabitWidget(PluginCall call) {
-        String name = call.getString("habitName", "");
-        if (TextUtils.isEmpty(name)) { call.reject("Choose a habit first."); return; }
+        String habitId = call.getString("habitId", "");
+        if (TextUtils.isEmpty(habitId)) { call.reject("Choose a habit first."); return; }
         SharedPreferences prefs = getContext().getSharedPreferences("lockedin_home_widgets", 0);
         try {
-            JSONArray queue = new JSONArray(prefs.getString("pending_habit_widget_names", "[]"));
-            queue.put(name);
-            prefs.edit().putString("selected_habit_name", name).putString("pending_habit_widget_names", queue.toString()).apply();
+            JSONArray queue = new JSONArray(prefs.getString("pending_habit_widget_ids", "[]"));
+            queue.put(habitId);
+            prefs.edit().putString("pending_habit_widget_ids", queue.toString()).apply();
         } catch (JSONException error) { call.reject("Could not queue the selected habit widget.", error); return; }
         requestHomeWidget(call, "habit");
     }
@@ -272,6 +271,17 @@ public class AppBlockerPlugin extends Plugin {
             boolean accepted = manager.requestPinAppWidget(provider, null, null);
             JSObject result = new JSObject(); result.put("pinned", accepted); call.resolve(result);
         } catch (Exception error) { call.reject("Could not open the Android widget picker.", error); }
+    }
+
+    @PluginMethod
+    public void getHomeWidgetStatus(PluginCall call) {
+        android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(getContext());
+        int streak = manager.getAppWidgetIds(new android.content.ComponentName(getContext(), StreakWidgetProvider.class)).length;
+        int habit = manager.getAppWidgetIds(new android.content.ComponentName(getContext(), HabitWidgetProvider.class)).length;
+        JSObject result = new JSObject();
+        result.put("streakCount", streak);
+        result.put("habitCount", habit);
+        call.resolve(result);
     }
 
     @PluginMethod
