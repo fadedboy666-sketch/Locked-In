@@ -11,10 +11,23 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 public class HabitWidgetProvider extends AppWidgetProvider {
  public static final String ACTION_DAY_TAP="PACKAGE_NAME.HABIT_WIDGET_DAY_TAP";
- @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids){for(int id:ids)updateOne(context,manager,id);}
+ @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids){
+  SharedPreferences prefs=context.getSharedPreferences("lockedin_home_widgets",0);
+  for(int id:ids){
+   String mapKey="habit_widget_name_"+id;
+   if(!prefs.contains(mapKey)){
+    try{
+     JSONArray queue=new JSONArray(prefs.getString("pending_habit_widget_names","[]"));
+     if(queue.length()>0){String name=queue.optString(0,"");JSONArray rest=new JSONArray();for(int q=1;q<queue.length();q++)rest.put(queue.opt(q));prefs.edit().putString(mapKey,name).putString("pending_habit_widget_names",rest.toString()).apply();}
+     else prefs.edit().putString(mapKey,prefs.getString("selected_habit_name","")).apply();
+    }catch(Exception ignored){prefs.edit().putString(mapKey,prefs.getString("selected_habit_name","")).apply();}
+   }
+   updateOne(context,manager,id);
+  }
+ }
  public static void updateOne(Context context,AppWidgetManager manager,int id){
   SharedPreferences prefs=context.getSharedPreferences("lockedin_home_widgets",0);
-  String chosen=prefs.getString("selected_habit_name","");
+  String chosen=prefs.getString("habit_widget_name_"+id,prefs.getString("selected_habit_name",""));
   RemoteViews v=new RemoteViews(context.getPackageName(),R.layout.widget_habit);
   try{
    JSONArray all=new JSONArray(prefs.getString("habits","[]")); JSONObject habit=null;
