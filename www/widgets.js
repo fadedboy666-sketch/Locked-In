@@ -36,10 +36,10 @@
     catch(e){if(note)note.textContent=e?.message||'Could not request the habit widget.';}
   }
   async function sync() {
-    const p=plugin(); if(!p?.syncHomeWidgets || !window.state) return;
+    const p=plugin(), s=appState(); if(!p?.syncHomeWidgets || !s) return;
     try {
       const selected=localStorage.getItem('lockedin_widget_habit_name_v1')||'';
-      const safeHabits=habits().map(h=>({name:String(h.name||''),icon:String(h.icon||''),metric:String(h.metric||''),days:Array.isArray(h.days)?h.days.slice(0,30):[],createdOn:String(h.createdOn||''),firstUseDate:String(window.state.firstUseDate||'')}));
+      const safeHabits=habits().map(h=>({name:String(h.name||''),icon:String(h.icon||''),metric:String(h.metric||''),days:Array.isArray(h.days)?h.days.slice(0,30):[],createdOn:String(h.createdOn||''),firstUseDate:String(s.firstUseDate||'')}));
       await p.syncHomeWidgets({streak:Number(s.streak)||0,streakStartMs:s.streakStart instanceof Date?s.streakStart.getTime():0,lapsed:!!s.lapsed,habits:safeHabits,selectedHabitName:selected});
     } catch(e) { console.warn('Home widget sync failed:',e); }
   }
