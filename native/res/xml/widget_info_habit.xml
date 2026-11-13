@@ -1,2 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android" android:minWidth="280dp" android:minHeight="140dp" android:initialLayout="@layout/widget_habit" android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen" android:updatePeriodMillis="0" />
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android" android:minWidth="280dp" android:minHeight="140dp" android:initialLayout="@layout/widget_habit" android:previewLayout="@layout/widget_habit" android:previewImage="@drawable/widget_preview_habit" android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen" android:updatePeriodMillis="0" />
