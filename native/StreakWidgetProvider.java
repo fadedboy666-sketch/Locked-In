@@ -11,6 +11,9 @@ public class StreakWidgetProvider extends AppWidgetProvider {
  @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
   SharedPreferences prefs=context.getSharedPreferences("lockedin_home_widgets",0);
   int streak=Math.max(0,prefs.getInt("streak",0));
+  long startMs=prefs.getLong("streak_start_ms",0L);
+  if(prefs.getBoolean("streak_lapsed",false)) streak=0;
+  else if(startMs>0L){long now=System.currentTimeMillis();int today=android.text.format.Time.getJulianDay(now,java.util.TimeZone.getDefault().getOffset(now));int started=android.text.format.Time.getJulianDay(startMs,java.util.TimeZone.getDefault().getOffset(startMs));streak=Math.max(0,today-started);}
   Intent launch=context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
   if(launch!=null){launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);}
   PendingIntent tap=launch==null?null:PendingIntent.getActivity(context,4101,launch,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
