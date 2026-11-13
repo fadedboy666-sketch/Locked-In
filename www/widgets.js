@@ -24,7 +24,7 @@ function drawSelection(){
  selectionRoot.querySelectorAll('[data-widget-habit]').forEach(card=>card.addEventListener('click',()=>{const id=card.getAttribute('data-widget-habit');if(selected.has(id))selected.delete(id);else selected.add(id);drawSelection();}));
  selectionRoot.querySelector('#confirmWidgetSelection').onclick=confirmSelection;
 }
-function closeSelection(){if(selectionRoot)selectionRoot.style.display='none';selected.clear();}
+function closeSelection(){if(selectionRoot)selectionRoot.style.display='none';selected.clear();window.showScreen?.('settingsScreen');}
 async function confirmSelection(){
  const p=plugin();if(!p?.requestHabitWidget||!p?.getHomeWidgetStatus)return;
  const chosen=habits().filter(h=>selected.has(String(h.id??h.name)));if(!chosen.length)return;
