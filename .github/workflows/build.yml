@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Bundle home-screen widgets
+        run: npx --yes esbuild@0.24.2 www/widgets.js --bundle --format=iife --outfile=www/widgets.bundle.js
+
       - name: Bundle native notifications
         run: npx --yes esbuild@0.24.2 www/notifications.js --bundle --format=iife --outfile=www/notifications.bundle.js
         
@@ -104,10 +107,12 @@ jobs:
 
       - name: Verify App Blocker files and web entry
         run: |
+          test -f www/widgets.js
           test -f www/app-blocker.js
           test -f www/index.html
           test -f www/icon-512.png
           grep -q 'src="app-blocker.js"' www/index.html
+          grep -q 'src="widgets.bundle.js"' www/index.html
           echo "App Blocker web entry and logo asset verified."
       - name: Increase Gradle download timeout
         run: |
