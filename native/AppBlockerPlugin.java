@@ -213,6 +213,8 @@ public class AppBlockerPlugin extends Plugin {
             JSObject data = call.getData();
             SharedPreferences.Editor edit = getContext().getSharedPreferences("lockedin_home_widgets", 0).edit();
             edit.putInt("streak", Math.max(0, data.optInt("streak", 0)));
+            edit.putLong("streak_start_ms", data.optLong("streakStartMs", 0));
+            edit.putBoolean("streak_lapsed", data.optBoolean("lapsed", false));
             edit.putString("habits", data.optJSONArray("habits") == null ? "[]" : data.optJSONArray("habits").toString());
             edit.putString("selected_habit_name", data.optString("selectedHabitName", ""));
             edit.apply();
