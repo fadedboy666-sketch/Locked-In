@@ -252,13 +252,20 @@ public class AppBlockerPlugin extends Plugin {
     public void requestHabitWidget(PluginCall call) {
         String habitId = call.getString("habitId", "");
         if (TextUtils.isEmpty(habitId)) { call.reject("Choose a habit first."); return; }
-        SharedPreferences prefs = getContext().getSharedPreferences("lockedin_home_widgets", 0);
         try {
-            JSONArray queue = new JSONArray(prefs.getString("pending_habit_widget_ids", "[]"));
-            queue.put(habitId);
-            prefs.edit().putString("pending_habit_widget_ids", queue.toString()).apply();
-        } catch (JSONException error) { call.reject("Could not queue the selected habit widget.", error); return; }
-        requestHomeWidget(call, "habit");
+            if (android.os.Build.VERSION.SDK_INT < 26) { call.reject("Home-screen widget pinning requires Android 8.0 or newer."); return; }
+            android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(getContext());
+            if (!manager.isRequestPinAppWidgetSupported()) { call.reject("This launcher does not support adding widgets from the app. Add Locked In from your home-screen widget menu."); return; }
+            ComponentName provider = new ComponentName(getContext(), HabitWidgetProvider.class);
+            Intent callbackIntent = new Intent(getContext(), HabitWidgetProvider.class);
+            callbackIntent.setAction(HabitWidgetProvider.ACTION_WIDGET_PINNED);
+            callbackIntent.putExtra("habit_id", habitId);
+            int requestCode = (int)(System.nanoTime() & 0x7fffffff);
+            android.app.PendingIntent callback = android.app.PendingIntent.getBroadcast(getContext(), requestCode, callbackIntent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_MUTABLE);
+            boolean accepted = manager.requestPinAppWidget(provider, null, callback);
+            JSObject result = new JSObject(); result.put("pinned", accepted); call.resolve(result);
+        } catch (Exception error) { call.reject("Could not open the Android widget picker.", error); }
     }
 
     private void requestHomeWidget(PluginCall call, String kind) {
