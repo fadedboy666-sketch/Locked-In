@@ -7,11 +7,13 @@ import android.media.AudioManager;
 import android.view.KeyEvent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.ImageView;
@@ -92,17 +94,10 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private void showBlocker(String packageName) {
-        // Keep the existing full-screen overlay attached while the next blocker
-        // screen is built. Removing it first created a visible hand-off gap.
-        challengeStarted = false;
-        challengeStartedAt = 0L;
-        if (enableDoneRunnable != null) {
-            handler.removeCallbacks(enableDoneRunnable);
-            enableDoneRunnable = null;
-        }
+        boolean keepExistingOverlay = packageName.equals(currentBlockedPackage) && blockerView != null;
+        if (!keepExistingOverlay) removeBlocker();
         if (windowManager == null) windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         if (windowManager == null) return;
-        String previousPackage = currentBlockedPackage;
         currentBlockedPackage = packageName;
 
         SharedPreferences prefs = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
@@ -168,7 +163,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             root.addView(limit, limitParams);
         }
 
-        if (!replaceOverlay(root)) currentBlockedPackage = previousPackage;
+        if (keepExistingOverlay) replaceOverlay(root); else attachOverlay(root);
     }
 
     private void showChallengeStart(String packageName) {
@@ -229,7 +224,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         challengeStartedAt = SystemClock.elapsedRealtime();
         if (enableDoneRunnable != null) handler.removeCallbacks(enableDoneRunnable);
         enableDoneRunnable = () -> {
-            if (!packageName.equals(currentBlockedPackage) || blockerView != root) return;
+            if (!packageName.equals(currentBlockedPackage) || root.getParent() == null) return;
             done.setAlpha(1f);
             done.setBackground(background(RED, RED, 14));
         };
@@ -468,11 +463,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         return new LinearLayout.LayoutParams(-1, -2);
     }
 
-    // Add the new opaque blocker before removing the old one. If adding the new
-    // view fails, leave the old blocker attached rather than exposing the app.
-    private boolean replaceOverlay(View view) {
-        if (windowManager == null) windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        if (windowManager == null) return false;
+    private void attachOverlay(View view) {
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -480,17 +471,29 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 android.graphics.PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
-        View previousView = blockerView;
         try {
             windowManager.addView(view, params);
             blockerView = view;
         } catch (Exception ignored) {
-            return false;
+            blockerView = null;
+            currentBlockedPackage = "";
         }
-        if (previousView != null && previousView != view) {
-            try { windowManager.removeView(previousView); } catch (Exception ignored) { }
+    }
+
+    private void replaceOverlay(View view) {
+        // Keep the accessibility overlay window attached while changing screens.
+        // Removing and re-adding it creates a visible gap where the blocked app peeks through.
+        if (blockerView instanceof ViewGroup && windowManager != null) {
+            try {
+                ViewGroup host = (ViewGroup) blockerView;
+                host.removeAllViews();
+                host.addView(view, new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+                return;
+            } catch (Exception ignored) { }
         }
-        return true;
+        attachOverlay(view);
     }
 
     private void removeOverlayOnly() {
