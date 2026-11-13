@@ -206,4 +206,63 @@ public class AppBlockerPlugin extends Plugin {
         }
         return false;
     }
+
+    @PluginMethod
+    public void syncHomeWidgets(PluginCall call) {
+        try {
+            JSObject data = call.getData();
+            SharedPreferences.Editor edit = getContext().getSharedPreferences("lockedin_home_widgets", 0).edit();
+            edit.putInt("streak", Math.max(0, data.optInt("streak", 0)));
+            edit.putString("habits", data.optJSONArray("habits") == null ? "[]" : data.optJSONArray("habits").toString());
+            edit.putString("selected_habit_name", data.optString("selectedHabitName", ""));
+            edit.apply();
+            updateHomeWidgets();
+            call.resolve();
+        } catch (Exception error) { call.reject("Could not sync home-screen widgets.", error); }
+    }
+
+    @PluginMethod
+    public void requestStreakWidget(PluginCall call) { requestHomeWidget(call, "streak"); }
+
+    @PluginMethod
+    public void requestHabitWidget(PluginCall call) {
+        String name = call.getString("habitName", "");
+        if (TextUtils.isEmpty(name)) { call.reject("Choose a habit first."); return; }
+        getContext().getSharedPreferences("lockedin_home_widgets", 0).edit().putString("selected_habit_name", name).apply();
+        requestHomeWidget(call, "habit");
+    }
+
+    private void requestHomeWidget(PluginCall call, String kind) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT < 26) { call.reject("Home-screen widget pinning requires Android 8.0 or newer."); return; }
+            android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(getContext());
+            if (!manager.isRequestPinAppWidgetSupported()) { call.reject("This launcher does not support adding widgets from the app. Add Locked In from your home-screen widget menu."); return; }
+            android.content.ComponentName provider = new android.content.ComponentName(getContext(),
+                kind.equals("streak") ? StreakWidgetProvider.class : HabitWidgetProvider.class);
+            boolean accepted = manager.requestPinAppWidget(provider, null, null);
+            JSObject result = new JSObject(); result.put("pinned", accepted); call.resolve(result);
+        } catch (Exception error) { call.reject("Could not open the Android widget picker.", error); }
+    }
+
+    @PluginMethod
+    public void getPendingWidgetChanges(PluginCall call) {
+        SharedPreferences prefs = getContext().getSharedPreferences("lockedin_home_widgets", 0);
+        String raw = prefs.getString("pending_changes", "[]");
+        prefs.edit().putString("pending_changes", "[]").apply();
+        JSObject result = new JSObject();
+        try { result.put("changes", new JSONArray(raw)); }
+        catch (JSONException error) { result.put("changes", new JSONArray()); }
+        call.resolve(result);
+    }
+
+    private void updateHomeWidgets() {
+        android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(getContext());
+        android.content.ComponentName streak = new android.content.ComponentName(getContext(), StreakWidgetProvider.class);
+        android.content.ComponentName habit = new android.content.ComponentName(getContext(), HabitWidgetProvider.class);
+        int[] streakIds = manager.getAppWidgetIds(streak);
+        int[] habitIds = manager.getAppWidgetIds(habit);
+        if (streakIds.length > 0) new StreakWidgetProvider().onUpdate(getContext(), manager, streakIds);
+        if (habitIds.length > 0) new HabitWidgetProvider().onUpdate(getContext(), manager, habitIds);
+    }
+
 }
