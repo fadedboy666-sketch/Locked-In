@@ -16,21 +16,12 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 public class HabitWidgetProvider extends AppWidgetProvider {
  public static final String ACTION_DAY_TAP="PACKAGE_NAME.HABIT_WIDGET_DAY_TAP";
+ public static final String ACTION_WIDGET_PINNED="PACKAGE_NAME.HABIT_WIDGET_PINNED";
  @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){
   SharedPreferences prefs=context.getSharedPreferences("lockedin_home_widgets",0);
   for(int id:ids){
    String key="habit_widget_id_"+id;
-   if(!prefs.contains(key)){
-    String mapped="";
-    try{
-     JSONArray queue=new JSONArray(prefs.getString("pending_habit_widget_ids","[]"));
-     if(queue.length()>0){
-      mapped=queue.optString(0,"");JSONArray rest=new JSONArray();
-      for(int q=1;q<queue.length();q++)rest.put(queue.opt(q));
-      prefs.edit().putString(key,mapped).putString("pending_habit_widget_ids",rest.toString()).apply();
-     }else prefs.edit().putString(key,"").apply();
-    }catch(Exception ignored){prefs.edit().putString(key,"").apply();}
-   }
+   if(!prefs.contains(key))prefs.edit().putString(key,"").apply();
    updateOne(context,manager,id);
   }
  }
@@ -90,7 +81,17 @@ public class HabitWidgetProvider extends AppWidgetProvider {
  }
  @Override public void onReceive(Context context,Intent intent){
   super.onReceive(context,intent);
-  if(intent==null||!ACTION_DAY_TAP.equals(intent.getAction()))return;
+  if(intent==null)return;
+  if(ACTION_WIDGET_PINNED.equals(intent.getAction())){
+   int widgetId=intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,AppWidgetManager.INVALID_APPWIDGET_ID);
+   String pinnedHabitId=intent.getStringExtra("habit_id");
+   if(widgetId!=AppWidgetManager.INVALID_APPWIDGET_ID&&!TextUtils.isEmpty(pinnedHabitId)){
+    context.getSharedPreferences("lockedin_home_widgets",0).edit().putString("habit_widget_id_"+widgetId,pinnedHabitId).apply();
+    updateOne(context,AppWidgetManager.getInstance(context),widgetId);
+   }
+   return;
+  }
+  if(!ACTION_DAY_TAP.equals(intent.getAction()))return;
   String habitId=intent.getStringExtra("habit_id");int day=intent.getIntExtra("day_index",-1);
   if(TextUtils.isEmpty(habitId)||day<0||day>=30)return;
   SharedPreferences prefs=context.getSharedPreferences("lockedin_home_widgets",0);
