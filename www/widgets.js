@@ -26,11 +26,27 @@ function drawSelection(){
 }
 function closeSelection(){if(selectionRoot)selectionRoot.style.display='none';selected.clear();}
 async function confirmSelection(){
- const p=plugin();if(!p?.requestHabitWidget)return;
+ const p=plugin();if(!p?.requestHabitWidget||!p?.getHomeWidgetStatus)return;
  const chosen=habits().filter(h=>selected.has(String(h.id??h.name)));if(!chosen.length)return;
- const button=selectionRoot.querySelector('#confirmWidgetSelection');button.disabled=true;button.textContent='Adding widgets…';await sync();
+ const button=selectionRoot.querySelector('#confirmWidgetSelection');button.disabled=true;await sync();
  let accepted=0;
- for(const h of chosen){try{const result=await p.requestHabitWidget({habitId:String(h.id??h.name)});if(result?.pinned)accepted++;}catch(e){console.warn('Habit widget request failed:',h.name,e);}}
+ for(const h of chosen){
+  try{
+   const before=await p.getHomeWidgetStatus();
+   button.textContent='Adding '+String(h.name||'habit')+'…';
+   const result=await p.requestHabitWidget({habitId:String(h.id??h.name)});
+   if(result?.pinned){
+    accepted++;
+    button.textContent='Confirm the widget on your home screen…';
+    const started=Date.now();
+    while(Date.now()-started<45000){
+     await new Promise(resolve=>setTimeout(resolve,500));
+     const current=await p.getHomeWidgetStatus();
+     if((current?.habitCount||0)>(before?.habitCount||0))break;
+    }
+   }
+  }catch(e){console.warn('Habit widget request failed:',h.name,e);}
+ }
  closeSelection();if(accepted)localStorage.setItem('lockedin_widget_invite_added_v1','1');
 }
 async function sync(){
