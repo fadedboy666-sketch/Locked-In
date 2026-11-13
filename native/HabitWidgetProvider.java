@@ -23,7 +23,7 @@ public class HabitWidgetProvider extends AppWidgetProvider {
    else{
     v.setTextViewText(R.id.habit_widget_title,habit.optString("name","Habit"));
     String metric=habit.optString("metric","");v.setTextViewText(R.id.habit_widget_subtitle,metric);
-    JSONArray days=habit.optJSONArray("days");RemoteViews grid=new RemoteViews(context.getPackageName(),R.layout.widget_habit_grid);
+    JSONArray days=habit.optJSONArray("days");v.removeAllViews(R.id.habit_widget_grid);
     for(int d=0;d<30;d++){
      String status=days==null?"missed":days.optString(d,"missed");
      RemoteViews cell=new RemoteViews(context.getPackageName(),R.layout.widget_habit_cell);
@@ -32,9 +32,9 @@ public class HabitWidgetProvider extends AppWidgetProvider {
      cell.setInt(R.id.habit_day_number,"setBackgroundResource",bg);
      Intent tap=new Intent(context,HabitWidgetProvider.class);tap.setAction(ACTION_DAY_TAP);tap.putExtra("habit_name",chosen);tap.putExtra("day_index",d);tap.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id);
      PendingIntent pi=PendingIntent.getBroadcast(context,5000+id*40+d,tap,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-     cell.setOnClickPendingIntent(R.id.habit_day_number,pi);grid.addView(R.id.habit_widget_grid,cell);
+     cell.setOnClickPendingIntent(R.id.habit_day_number,pi);v.addView(R.id.habit_widget_grid,cell);
     }
-    v.removeAllViews(R.id.habit_widget_grid);v.addView(R.id.habit_widget_grid,grid);
+    
    }
   }catch(Exception ignored){v.setTextViewText(R.id.habit_widget_title,"30-day tracker");}
   Intent launch=context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
