@@ -25,6 +25,8 @@ import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -41,7 +43,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private String currentBlockedPackage = "";
     private String foregroundPackage = "";
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private Runnable reblockRunnable;
+    private final Map<String, Runnable> reblockRunnables = new HashMap<>();
     private Runnable enableDoneRunnable;
     private long challengeStartedAt = 0L;
     private boolean challengeStarted = false;
@@ -249,29 +251,83 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
 
     private void grantScrollPass(String packageName) {
         if (!packageName.equals(currentBlockedPackage)) return;
-        SharedPreferences prefs = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
-        long until = System.currentTimeMillis() + SCROLL_WINDOW_MS;
-        int completedPasses = prefs.getInt("scroll_count_" + packageName, 0);
-        if (completedPasses >= MAX_SCROLL_PASSES) { showBlocker(packageName); return; }
-        prefs.edit().putInt("scroll_count_" + packageName, completedPasses + 1)
-                .putLong("scroll_until_" + packageName, until).apply();
+
+        SharedPreferences prefs =
+                getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
+
+        final long until = System.currentTimeMillis() + SCROLL_WINDOW_MS;
+
+        int completedPasses =
+                prefs.getInt("scroll_count_" + packageName, 0);
+
+        if (completedPasses >= MAX_SCROLL_PASSES) {
+            showBlocker(packageName);
+            return;
+        }
+
+        // Persist the access deadline so the blocker can re-check it after a restart.
+        prefs.edit()
+                .putInt("scroll_count_" + packageName, completedPasses + 1)
+                .putLong("scroll_until_" + packageName, until)
+                .apply();
+
         removeBlocker();
-        if (reblockRunnable != null) handler.removeCallbacks(reblockRunnable);
-        reblockRunnable = () -> {
-            SharedPreferences latest = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
-            boolean enabled = latest.getBoolean(AppBlockerPlugin.KEY_MANUAL, false)
-                    || latest.getBoolean(AppBlockerPlugin.KEY_SESSION, false);
-            boolean stillBlocked = enabled && isBlocked(latest, packageName);
-            latest.edit().remove("scroll_until_" + packageName).apply();
-            if (stillBlocked && packageName.equals(foregroundPackage)) {
-                // Leave the distracting app when the five-minute pass expires.
-                // Android Home normally stops foreground feed playback; apps that
-                // support background audio may still continue independently.
-                performGlobalAction(GLOBAL_ACTION_HOME);
+
+        // Cancel only the previous timer for this package.
+        Runnable previous = reblockRunnables.remove(packageName);
+        if (previous != null) {
+            handler.removeCallbacks(previous);
+        }
+
+        Runnable expiry = new Runnable() {
+            @Override
+            public void run() {
+                SharedPreferences latest =
+                        getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
+
+                long savedUntil =
+                        latest.getLong("scroll_until_" + packageName, 0L);
+
+                // Do not let an outdated timer interfere with a newer pass.
+                if (savedUntil != until) {
+                    if (reblockRunnables.get(packageName) == this) {
+                        reblockRunnables.remove(packageName);
+                    }
+                    return;
+                }
+
+                // If the handler runs early, wait for the actual saved deadline.
+                long remaining = savedUntil - System.currentTimeMillis();
+                if (remaining > 0L) {
+                    handler.postDelayed(this, remaining);
+                    return;
+                }
+
+                boolean enabled =
+                        latest.getBoolean(AppBlockerPlugin.KEY_MANUAL, false)
+                        || latest.getBoolean(AppBlockerPlugin.KEY_SESSION, false);
+
+                boolean stillBlocked = enabled && isBlocked(latest, packageName);
+
+                // Expire this package's temporary access.
+                latest.edit()
+                        .remove("scroll_until_" + packageName)
+                        .apply();
+
+                if (stillBlocked && packageName.equals(foregroundPackage)) {
+                    // Best-effort media pause, then leave the selected app.
+                    pauseForegroundMediaBestEffort();
+                    performGlobalAction(GLOBAL_ACTION_HOME);
+                }
+
+                if (reblockRunnables.get(packageName) == this) {
+                    reblockRunnables.remove(packageName);
+                }
             }
-            removeBlocker();
         };
-        handler.postDelayed(reblockRunnable, SCROLL_WINDOW_MS);
+
+        reblockRunnables.put(packageName, expiry);
+        handler.postDelayed(expiry, SCROLL_WINDOW_MS);
     }
 
     private LinearLayout baseScreen() {
@@ -521,7 +577,10 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     @Override public void onInterrupt() { removeBlocker(); }
     @Override public void onDestroy() {
         removeBlocker();
-        if (reblockRunnable != null) handler.removeCallbacks(reblockRunnable);
+        for (Runnable runnable : reblockRunnables.values()) {
+            handler.removeCallbacks(runnable);
+        }
+        reblockRunnables.clear();
         super.onDestroy();
     }
 }
