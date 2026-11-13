@@ -7,7 +7,6 @@ import android.media.AudioManager;
 import android.view.KeyEvent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -93,9 +92,17 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private void showBlocker(String packageName) {
-        removeBlocker();
+        // Keep the existing full-screen overlay attached while the next blocker
+        // screen is built. Removing it first created a visible hand-off gap.
+        challengeStarted = false;
+        challengeStartedAt = 0L;
+        if (enableDoneRunnable != null) {
+            handler.removeCallbacks(enableDoneRunnable);
+            enableDoneRunnable = null;
+        }
         if (windowManager == null) windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         if (windowManager == null) return;
+        String previousPackage = currentBlockedPackage;
         currentBlockedPackage = packageName;
 
         SharedPreferences prefs = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
@@ -161,7 +168,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             root.addView(limit, limitParams);
         }
 
-        attachOverlay(root);
+        if (!replaceOverlay(root)) currentBlockedPackage = previousPackage;
     }
 
     private void showChallengeStart(String packageName) {
@@ -461,7 +468,11 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         return new LinearLayout.LayoutParams(-1, -2);
     }
 
-    private void attachOverlay(View view) {
+    // Add the new opaque blocker before removing the old one. If adding the new
+    // view fails, leave the old blocker attached rather than exposing the app.
+    private boolean replaceOverlay(View view) {
+        if (windowManager == null) windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        if (windowManager == null) return false;
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -469,18 +480,17 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 android.graphics.PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
+        View previousView = blockerView;
         try {
             windowManager.addView(view, params);
             blockerView = view;
         } catch (Exception ignored) {
-            blockerView = null;
-            currentBlockedPackage = "";
+            return false;
         }
-    }
-
-    private void replaceOverlay(View view) {
-        removeOverlayOnly();
-        attachOverlay(view);
+        if (previousView != null && previousView != view) {
+            try { windowManager.removeView(previousView); } catch (Exception ignored) { }
+        }
+        return true;
     }
 
     private void removeOverlayOnly() {
