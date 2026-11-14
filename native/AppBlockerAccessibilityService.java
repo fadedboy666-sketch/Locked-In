@@ -2,6 +2,7 @@ package PACKAGE_NAME;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.SharedPreferences;
+import android.content.Intent;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.AudioAttributes;
@@ -344,6 +345,15 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
                 .apply();
 
         removeBlocker();
+        // The blocked app was sent behind the home screen while the banner was
+        // visible. Reopen it for the approved scroll pass after the challenge.
+        try {
+            Intent launch = getPackageManager().getLaunchIntentForPackage(packageName);
+            if (launch != null) {
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(launch);
+            }
+        } catch (Exception ignored) { }
 
         // Cancel only the previous timer for this package.
         Runnable previous = reblockRunnables.remove(packageName);
