@@ -4,6 +4,9 @@ import android.accessibilityservice.AccessibilityService;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.media.AudioManager;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
+import android.os.Build;
 import android.view.KeyEvent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -43,6 +46,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private String currentBlockedPackage = "";
     private String foregroundPackage = "";
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private AudioFocusRequest blockerAudioFocusRequest;
+    private final AudioManager.OnAudioFocusChangeListener blockerAudioFocusListener = focusChange -> { };
     private final Map<String, Runnable> reblockRunnables = new HashMap<>();
     private Runnable enableDoneRunnable;
     private long challengeStartedAt = 0L;
@@ -72,17 +77,30 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         }
         foregroundPackage = packageName;
 
+        // Once the blocker is visible, keep it above the launcher and any transition
+        // windows. The user leaves through the blocker button, not by briefly exposing
+        // the blocked app underneath.
+        if (!packageName.equals(currentBlockedPackage) && blockerView != null
+                && !currentBlockedPackage.isEmpty()) return;
+
         SharedPreferences prefs = getSharedPreferences(AppBlockerPlugin.PREFS, MODE_PRIVATE);
         boolean enabled = prefs.getBoolean(AppBlockerPlugin.KEY_MANUAL, false)
                 || prefs.getBoolean(AppBlockerPlugin.KEY_SESSION, false);
         if (!enabled || !isBlocked(prefs, packageName) || hasTemporaryAccess(prefs, packageName)) {
+            if (blockerView != null && !currentBlockedPackage.isEmpty()) return;
             removeBlocker();
             return;
         }
         if (!packageName.equals(currentBlockedPackage) || blockerView == null) {
-            // Cover the app first. Media controls can take time and must not delay the banner.
+            // Attach the opaque banner immediately, interrupt media, then move the
+            // blocked activity behind the banner so its video cannot remain visible.
             showBlocker(packageName);
             pauseBlockedMedia(packageName);
+            handler.postDelayed(() -> {
+                if (packageName.equals(currentBlockedPackage) && blockerView != null) {
+                    performGlobalAction(GLOBAL_ACTION_HOME);
+                }
+            }, 75L);
         }
     }
 
@@ -152,7 +170,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         messageParams.bottomMargin = dp(30);
         root.addView(message, messageParams);
 
-        addActionButton(root, "LOCK IN", RED, WHITE, () -> performGlobalAction(GLOBAL_ACTION_HOME));
+        addActionButton(root, "LOCK IN", RED, WHITE, () -> { removeBlocker(); performGlobalAction(GLOBAL_ACTION_HOME); });
         int scrollCount = prefs.getInt("scroll_count_" + packageName, 0);
         if (scrollCount < MAX_SCROLL_PASSES) {
             LinearLayout.LayoutParams scrollParams = matchWrap();
@@ -240,6 +258,42 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
     }
 
+    private void requestBlockerAudioFocus() {
+        try {
+            AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
+            if (audio == null) return;
+            if (Build.VERSION.SDK_INT >= 26) {
+                if (blockerAudioFocusRequest == null) {
+                    AudioAttributes attributes = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build();
+                    blockerAudioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                            .setAudioAttributes(attributes)
+                            .setOnAudioFocusChangeListener(blockerAudioFocusListener, handler)
+                            .setAcceptsDelayedFocusGain(false)
+                            .build();
+                }
+                audio.requestAudioFocus(blockerAudioFocusRequest);
+            } else {
+                audio.requestAudioFocus(blockerAudioFocusListener, AudioManager.STREAM_MUSIC,
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE);
+            }
+        } catch (Exception ignored) { }
+    }
+
+    private void abandonBlockerAudioFocus() {
+        try {
+            AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
+            if (audio == null) return;
+            if (Build.VERSION.SDK_INT >= 26 && blockerAudioFocusRequest != null) {
+                audio.abandonAudioFocusRequest(blockerAudioFocusRequest);
+            } else {
+                audio.abandonAudioFocus(blockerAudioFocusListener);
+            }
+        } catch (Exception ignored) { }
+    }
+
     private void pauseForegroundMediaBestEffort() {
         try {
             AudioManager audio = (AudioManager) getSystemService(AUDIO_SERVICE);
@@ -253,18 +307,18 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private void pauseBlockedMedia(String packageName) {
+        requestBlockerAudioFocus();
         pauseForegroundMediaBestEffort();
-        // Some media sessions ignore the first pause while their activity is transitioning.
-        handler.postDelayed(() -> {
-            if (packageName.equals(currentBlockedPackage) && packageName.equals(foregroundPackage)) {
-                pauseForegroundMediaBestEffort();
-            }
-        }, 180L);
-        handler.postDelayed(() -> {
-            if (packageName.equals(currentBlockedPackage) && packageName.equals(foregroundPackage)) {
-                pauseForegroundMediaBestEffort();
-            }
-        }, 500L);
+        // Repeat pause after the activity is backgrounded; some feeds ignore the
+        // first media-key event while their window is transitioning.
+        long[] retries = {120L, 350L, 800L, 1500L};
+        for (long delay : retries) {
+            handler.postDelayed(() -> {
+                if (packageName.equals(currentBlockedPackage) && blockerView != null) {
+                    pauseForegroundMediaBestEffort();
+                }
+            }, delay);
+        }
     }
 
     private void grantScrollPass(String packageName) {
@@ -582,6 +636,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private void removeBlocker() {
+        abandonBlockerAudioFocus();
         removeOverlayOnly();
         currentBlockedPackage = "";
         challengeStarted = false;
