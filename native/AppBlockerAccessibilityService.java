@@ -57,7 +57,9 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         if (event == null || event.getPackageName() == null) return;
         // Overlay/window-content events are not reliable foreground changes. Only
         // react to a real app-window transition to avoid the overlay hiding itself.
-        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && event.getEventType() != AccessibilityEvent.TYPE_WINDOWS_CHANGED) return;
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                && event.getEventType() != AccessibilityEvent.TYPE_WINDOWS_CHANGED
+                && event.getEventType() != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) return;
         String packageName = event.getPackageName().toString();
         if (packageName.equals(getPackageName())) {
             CharSequence className = event.getClassName();
@@ -78,8 +80,9 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             return;
         }
         if (!packageName.equals(currentBlockedPackage) || blockerView == null) {
-            pauseForegroundMediaBestEffort();
+            // Cover the app first. Media controls can take time and must not delay the banner.
             showBlocker(packageName);
+            pauseBlockedMedia(packageName);
         }
     }
 
@@ -247,6 +250,21 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             audio.dispatchMediaKeyEvent(down);
             audio.dispatchMediaKeyEvent(up);
         } catch (Exception ignored) { }
+    }
+
+    private void pauseBlockedMedia(String packageName) {
+        pauseForegroundMediaBestEffort();
+        // Some media sessions ignore the first pause while their activity is transitioning.
+        handler.postDelayed(() -> {
+            if (packageName.equals(currentBlockedPackage) && packageName.equals(foregroundPackage)) {
+                pauseForegroundMediaBestEffort();
+            }
+        }, 180L);
+        handler.postDelayed(() -> {
+            if (packageName.equals(currentBlockedPackage) && packageName.equals(foregroundPackage)) {
+                pauseForegroundMediaBestEffort();
+            }
+        }, 500L);
     }
 
     private void grantScrollPass(String packageName) {
