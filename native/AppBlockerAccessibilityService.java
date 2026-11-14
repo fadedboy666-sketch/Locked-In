@@ -97,11 +97,9 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             // blocked activity behind the banner so its video cannot remain visible.
             showBlocker(packageName);
             pauseBlockedMedia(packageName);
-            handler.postDelayed(() -> {
-                if (packageName.equals(currentBlockedPackage) && blockerView != null) {
-                    performGlobalAction(GLOBAL_ACTION_HOME);
-                }
-            }, 75L);
+            // Send the blocked activity behind the opaque accessibility overlay immediately.
+            // A delay here allows a frame of the blocked feed to remain visible.
+            performGlobalAction(GLOBAL_ACTION_HOME);
         }
     }
 
@@ -266,8 +264,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             if (Build.VERSION.SDK_INT >= 26) {
                 if (blockerAudioFocusRequest == null) {
                     AudioAttributes attributes = new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                             .build();
                     blockerAudioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
                             .setAudioAttributes(attributes)
